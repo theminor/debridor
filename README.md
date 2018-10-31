@@ -1,2 +1,5 @@
 # debridor
-Simple interface to the Real Debrid API
+
+**Still under construction!**
+
+debridor is a simple interface to the Real Debrid API using Node.js.
