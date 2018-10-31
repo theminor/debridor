@@ -59,3 +59,11 @@ typings/
 
 # next.js build output
 .next
+
+# settings file, which could have passwords/api keys
+settings.json
+
+#page template is user specific
+pageTemplate.html
+clientScript.js
+bootstrap.min.css
