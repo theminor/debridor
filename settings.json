@@ -35,7 +35,7 @@
 		},
 		"torrents/addMagnet": {
 			"description": "Add a magnet link to download, return a 201 HTTP code",
-			"method": "post"
+			"method": "post",
 			"parameters": [
 				"magnet",
 				"host",
@@ -44,7 +44,7 @@
 		},
 		"/torrents/selectFiles/": {
 			"description": "Add a magnet link to download, return a 201 HTTP code - url must be appended with id from addMagnet or addTorrent",
-			"method": "post"
+			"method": "post",
 			"parameters": [
 				"files"
 			]
