@@ -1,0 +1,27 @@
+{
+	"name": "debridor",
+	"version": "0.0.0",
+	"description": "Simple interface to the Real Debrid API",
+	"main": "debridor.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/theminor/debridor.git"
+	},
+	"keywords": [
+		"debrid",
+		"real debrid",
+		"api"
+	],
+	"dependencies": {
+		"ws": "^5.2.0"
+	},
+	"author": "theminor",
+	"license": "GPL-3.0",
+	"bugs": {
+		"url": "https://github.com/theminor/debridor/issues"
+	},
+	"homepage": "https://github.com/theminor/debridor#readme"
+}
