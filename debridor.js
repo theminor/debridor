@@ -24,15 +24,22 @@ function logErr(err, seperator, preMessage, simplify) {
  * Make a web request and return the retrieved JSON or other data (as a promise)
  * @param {string} url - the url to fetch
  * @param {Object} options - the request options (see http.request options in node.js api)
- * @param {string} [name] - short name of the request (for error handling only)
+ * @param {string} [name=url] - short name of the request (for error handling only)
+ * @param {Function} [progressFunc] - a function that is called after each chunk is recieved - sole parameter is an object like this: {downloaded: number, totalSize: number}
  * @returns {Promise} Returned data. If JSON was returned, the Promise will resolve into an Object. Otherwise, as a string.
  */
-function fetchWebDta (url, options, name) {
+function fetchWebDta(url, options, name, progressFunc) {
 	return new Promise((resolve, reject) => {
 		let req = http.request(url, options, (res) => {
 			let dta = '';
+			let responseSize = parseInt(res.headers['content-length'], 10);
+            let currentSize = 0;
 			resp.on('error', err => { err.message = 'Error in fetchWebDta(' + url + '): ' + err.message; reject(err); });
-			resp.on('data', chunk => dta += chunk);
+			resp.on('data', chunk => {
+				dta += chunk;
+				currentSize += chunk.length;
+				if (progressFunc) progressFunc(downloaded: currentSize, totalSize: responseSize);
+			});
 			resp.on('end', () => {
 				try { resolve(JSON.parse(dta)); }
 				catch (err) { resolve(dta); }
@@ -47,30 +54,24 @@ function fetchWebDta (url, options, name) {
 }
 
 /**
+ * Handle a link
+ * @param {Object} ws - the websocket on which to send updated endpoint data
+ * @param {String} url - the link to handle
+ */
+async function handleLink(ws, url) {
+	fetchWebDta(url, options, name, progressFunc)
+	// *** TO DO ***
+
+}
+
+/**
  * Take a list of links and return unrestricted Links from real debrid
  * @param {Object} ws - the websocket on which to send updated endpoint data
  * @param {Object} msg - the link data list of links in the form {links: ["link", "link", "link"], linksPw: "passwd", saveLoc: "/path/to/save"}
  */
 async function sbmtLinks(ws, msg) {
-	let unrestrictedLinks = [];
-	msg.links.forEach(link => unrestrictedLinks.push(await fetchWebDta(link, {method: "POST", headers: { Authorization: "Bearer " + settings.debridAccount.apiToken }, timeout: settings.debridAccount.requestTimeout})));
-	
-	
-	
-	// *** TO DO ***
-	
-	
-	
-	
-	
-	
-	
-	for (const pointName of Object.keys(settings.endPoints)) {
-		if (sendExsistingFirst) wsSendPoint(ws, null, settings.endPoints[pointName], 'Error from updateEndPoints() updating ' + pointName + ': '); // send existing data immediatly
-		endpointTick(settings.endPoints[pointName], ws);
-	}
+	msg.links.forEach(link => handleLink(ws, await fetchWebDta(link, {method: "POST", headers: { Authorization: "Bearer " + settings.debridAccount.apiToken }, timeout: settings.debridAccount.requestTimeout})));
 }
-
 
 /**
  * Entry Point
