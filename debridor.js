@@ -1,14 +1,8 @@
 'use strict';
-const http = require('http');
-const settings = require('./settings.json');
-
-/*
-const https = require('https');
 const fs = require('fs');
-const path = require('path');
-const { connect } = require('net');
+const http = require('http');  // const https = require('https');
 const WebSocket = require('ws');
-*/
+const settings = require('./settings.json');
 
 
 /**
