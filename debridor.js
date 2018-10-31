@@ -120,6 +120,17 @@ function updateEndPoints(ws, sendExsistingFirst) {
 	}
 }
 
+/**
+ * Update all endpoints and send updated data to the given websocket
+ * @param {Object} ws - the websocket on which to send updated endpoint data
+ */
+function sbmtLinks(ws, msg) {
+	for (const pointName of Object.keys(settings.endPoints)) {
+		if (sendExsistingFirst) wsSendPoint(ws, null, settings.endPoints[pointName], 'Error from updateEndPoints() updating ' + pointName + ': '); // send existing data immediatly
+		endpointTick(settings.endPoints[pointName], ws);
+	}
+}
+
 
 /**
  * Entry Point
@@ -154,10 +165,6 @@ server.listen(settings.server.port, err => {
 	if (err) { err.message = 'Server Error: ' + err.message; return logErr(err); }
 	else {
 		const wss = new WebSocket.Server({server});
-		for (const pointName of Object.keys(settings.endPoints)) {
-			settings.endPoints[pointName].timer = setInterval(() => endpointTick(settings.endPoints[pointName], null, wss), settings.endPoints[pointName].refreshMS);
-			endpointTick(settings.endPoints[pointName], null, wss);
-		}
 		wss.on('connection', ws => {
 			function closeWs(ws, err) {
 				if (err && !err.message.includes('CLOSED')) console.warn('pingTimer error: ' + err.toString() + '\n' + err.stack);
@@ -165,14 +172,13 @@ server.listen(settings.server.port, err => {
 				return ws.terminate();
 			}
 			ws.isAlive = true;
-			ws.on('message', message => { if (message === 'update') updateEndPoints(ws); else if (message === 'resetNotifications') resetNotifications(); });
+			ws.on('message', message => sbmtLinks(ws, message));
 			ws.on('pong', () => ws.isAlive = true);
 			ws.pingTimer = setInterval(() => {
 				if (ws.isAlive === false) return closeWs(ws);
 				ws.isAlive = false;
 				ws.ping(err => { if (err) return closeWs(ws, err); });
 			}, settings.server.pingInterval);
-			updateEndPoints(ws, true);
 		});
 		console.log('Server ' + settings.server.name + ' (http' + (settings.server.https ? 's://' : '://') + settings.server.address + ') is listening on port ' + settings.server.port);
 	}
