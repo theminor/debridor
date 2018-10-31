@@ -7,8 +7,47 @@
 		"pingInterval": 10000
 	},
 	"debridAccount": {
-		"username": "user",
-		"password": "pass",
-		"apiBaseURL": "https://api.real-debrid.com/rest/1.0/"
+		"apiToken": "XXXXXXXXXX",
+		"apiBaseUrl": "https://api.real-debrid.com/rest/1.0/"
+	},
+	"apiMethods": {
+		"unrestrict/link": {
+			"description": "Unrestrict a hoster link and get a new unrestricted link",
+			"method": "post",
+			"parameters" [
+				"link",
+				"password",
+				"remote"
+			]
+		},
+		"downloads": {
+			"description": "Get user downloads list",
+			"method": "get",
+			"parameters": []
+		},
+		"torrents/addTorrent": {
+			"description": "Add a torrent file to download, return a 201 HTTP code",
+			"method": "put",
+			"parameters": [
+				"host",
+				"split"
+			]
+		},
+		"torrents/addMagnet": {
+			"description": "Add a magnet link to download, return a 201 HTTP code",
+			"method": "post"
+			"parameters": [
+				"magnet",
+				"host",
+				"split"
+			]
+		},
+		"/torrents/selectFiles/": {
+			"description": "Add a magnet link to download, return a 201 HTTP code - url must be appended with id from addMagnet or addTorrent",
+			"method": "post"
+			"parameters": [
+				"files"
+			]
+		}
 	}
 }
