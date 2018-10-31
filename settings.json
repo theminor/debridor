@@ -14,7 +14,7 @@
 		"unrestrict/link": {
 			"description": "Unrestrict a hoster link and get a new unrestricted link",
 			"method": "post",
-			"parameters" [
+			"parameters": [
 				"link",
 				"password",
 				"remote"
