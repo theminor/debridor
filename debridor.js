@@ -47,82 +47,9 @@ function logErr(err, seperator, preMessage, simplify) {
 }
 
 /**
- * Send a data point on the given websocket
- * @param {Object} [ws] - the websocket object. If not specified, nothing is sent
- * @param {Object} [wss] - the full set of ws clients (in which case, it will update all clients on tick)
- * @param {Object} point - the point to send
- * @param {String} errMsg - pre-error message to identify errors by
- */
-function wsSendPoint(ws, wss, point, errMsg) {
-	if (wss) wss.clients.forEach(ws => wsSendPoint(ws, null, point, 'From wsSendPoint(): '));
-	if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(point, (k, v) => (k === 'mqttClient' || k === 'timer') ? undefined : v), err => { if (err) { err.message = 'Websocket Send Error: ' + errMsg + ': ' + err.message; logErr(err); } });
-}
-
-/**
- * Return the value of a deep Object location given as a string referenceing that location (see https://stackoverflow.com/questions/42206967/getting-a-field-from-a-json-object-using-a-address-string-in-javascript)
- * @param {Object} obj - the object to analyze
- * @param {string} pathString - a string referencing the path to the deep object wanted to return
- * @returns {Object} the referenced item
- * @example
- * // returns "hi"
- * getValue({foo:{x:0,data:[bar:"hi", baz:"no"]}}, foo.data[0].bar);
- */
-function getValue(obj, pathString) {
-	let valStg = pathString.replace(/\[/g, '.').replace(/\]/g, '').replace(/\"/g, '').replace(/\'/g, '').split('.').reduce((obj, key) => (obj || {})[key], obj);
-	return isNaN(valStg) ? valStg : Number(valStg);
-}
-
-/**
- * Update an endpoint and send endpoint data to the given websocket
- * @param {Object} point - object containing the settings for the endpoint
- * @param {Object} [ws] - the websocket on which to send data
- * @param {Object} [wss] - the full set of ws clients (in which case, it will update all clients on tick)
- */
-async function endpointTick(point, ws, wss) {
-	try {
-		let rawDta;
-		if (point.socket) rawDta = await fetchSocket(point.socket.url, point.socket.port, point.socket.netCmnd, point.dataTimeoutMS);
-		else if (point.web) rawDta = await fetchWebDta(point.web.url, point.dataTimeoutMS, point.name);
-		else if (point.mqtt) return await setupMqtt(point, ws, wss);
-		point.lastData = { "raw": rawDta };
-		for (const key of Object.keys(point.variableData)) {
-			if (point.variableData[key].findRange) {
-				let ldr;
-				for (let i = point.variableData[key].pathRangeMin; i < point.variableData[key].pathRangeMax; i++) {
-					let curVal = getValue(rawDta, point.variableData[key].path.replace('?', i));
-					if (!ldr || (point.variableData[key].findRange === 'max' && curVal > ldr) || (point.variableData[key].findRange === 'min' && curVal < ldr)) ldr = curVal;
-				}
-				point.lastData[key] = (ldr * (point.variableData[key].multiplier || 1)) + (point.variableData[key].offset || 0);
-			} else {
-				let dta = getValue(rawDta, point.variableData[key].path);
-				point.lastData[key] = isNaN(dta) ? dta : (getValue(rawDta, point.variableData[key].path) * (point.variableData[key].multiplier || 1)) + (point.variableData[key].offset || 0);
-			}
-			copyLastDataToHistory(point, key);
-			if (point.variableData[key].calculateRangePercent) {
-				if (!point.variableData[key].rangeMin || point.lastData[key] < point.variableData[key].rangeMin) point.variableData[key].rangeMin = point.lastData[key];
-				if (!point.variableData[key].rangeMax || point.lastData[key] > point.variableData[key].rangeMax) point.variableData[key].rangeMax = point.lastData[key];
-			}
-			if ((point.variableData[key].notification && point.variableData[key].notification.lowThreshold && (point.lastData[key] <= point.variableData[key].notification.lowThreshold)) ||(point.variableData[key].notification && point.variableData[key].notification.highThreshold && (point.lastData[key] >= point.variableData[key].notification.highThreshold))) sendNotification(point.variableData[key].notification);
-		}
-		wsSendPoint(ws, wss, point, 'From endpointTick(): ');
-	} catch(err) { err.message = 'Error in endpointTick(' + point.name + '): ' + err.message; logErr(err); }
-	if (point.updateAfter) endpointTick(settings.endPoints[point.updateAfter], ws, wss);
-}
-
-/**
- * Update all endpoints and send updated data to the given websocket
+ * Take a list of links and return unrestricted Links from real debrid
  * @param {Object} ws - the websocket on which to send updated endpoint data
- */
-function updateEndPoints(ws, sendExsistingFirst) {
-	for (const pointName of Object.keys(settings.endPoints)) {
-		if (sendExsistingFirst) wsSendPoint(ws, null, settings.endPoints[pointName], 'Error from updateEndPoints() updating ' + pointName + ': '); // send existing data immediatly
-		endpointTick(settings.endPoints[pointName], ws);
-	}
-}
-
-/**
- * Update all endpoints and send updated data to the given websocket
- * @param {Object} ws - the websocket on which to send updated endpoint data
+ * @param {Object} msg - the link data list of links in the form {links: ["link", "link", "link"], linksPw: "passwd", saveLoc: "/path/to/save"}
  */
 function sbmtLinks(ws, msg) {
 	for (const pointName of Object.keys(settings.endPoints)) {
@@ -172,7 +99,7 @@ server.listen(settings.server.port, err => {
 				return ws.terminate();
 			}
 			ws.isAlive = true;
-			ws.on('message', message => sbmtLinks(ws, message));
+			ws.on('message', message => sbmtLinks(ws, JSON.parse(message)));
 			ws.on('pong', () => ws.isAlive = true);
 			ws.pingTimer = setInterval(() => {
 				if (ws.isAlive === false) return closeWs(ws);
