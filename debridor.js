@@ -10,7 +10,7 @@ const settings = require('./settings.json');
  * @param {Error} err - an error Object that was thrown
  * @param {String} [seperator=" --> "] - a string used to seperate parts of the error ourput
  * @param {String} [preMessage="\n***${date}***"] - a string that is prepended to each error message
- * @param {Boolean | String} [simplify] - if true, the output will be shortened and will not include the lengthy stack trace data; if a String is recieved for the simplify parameter, the error message will be replaced with the String; if the err Object includes a custom "simpleMessage" property (whether or not the simplify paramter is true), the simpleMessage property will be used without lengthy trace info
+ * @param {Boolean | String} [simplify=false] - if true, the output will be shortened and will not include the lengthy stack trace data; if a String is recieved for the simplify parameter, the error message will be replaced with the String; if the err Object includes a custom "simpleMessage" property (whether or not the simplify paramter is true), the simpleMessage property will be used without lengthy trace info
  */
 function logErr(err, seperator, preMessage, simplify) {
 	if (!seperator) seperator = ' --> ';
@@ -21,29 +21,29 @@ function logErr(err, seperator, preMessage, simplify) {
 }
 
 /**
- * Fetch JSON or other data from a given url and return the result (as a promise)
+ * Make a web request and return the retrieved JSON or other data (as a promise)
  * @param {string} url - the url to fetch
- * @param {number} [timeoutMs] - milliseconds to wait before timing out. If not specified, will not timeout.
- * @param {string} [name] - short name of the website from which to fetch (for error handling only)
- * @returns {Promise} Returned data from the url. If JSON was returned, it will be parsed into an Object. Otherwise, as a string.
+ * @param {Object} options - the request options (see http.request options in node.js api)
+ * @param {string} [name] - short name of the request (for error handling only)
+ * @returns {Promise} Returned data. If JSON was returned, the Promise will resolve into an Object. Otherwise, as a string.
  */
- function fetchWebDta (url, timeoutMs, name) {
+ function fetchWebDta (url, options, name) {
 	return new Promise((resolve, reject) => {
-		if (timeoutMs) setTimeout(() => {
-			let err = new Error('Error in fetchWebDta(): Timeout fetching ' + url);
-			err.simpleMessage = 'fetchWebDta(): timeout fetching from ' + (name || '-unspecified-');
-			reject(err);
-		}, timeoutMs);
-		https.get(url, resp => {
+		let req = http.request(url, options, (res) => {
 			let dta = '';
 			resp.on('error', err => { err.message = 'Error in fetchWebDta(' + url + '): ' + err.message; reject(err); });
 			resp.on('data', chunk => dta += chunk);
 			resp.on('end', () => {
 				try { resolve(JSON.parse(dta)); }
 				catch (err) { resolve(dta); }
-			});
-		})
-	})
+			});			
+		});
+		req.on('timeout', () => {
+			let err = new Error('Error in fetchWebDta(): Timeout requesting ' + url);
+			err.simpleMessage = 'fetchWebDta(): timeout fetching from ' + (name || url);
+			reject(err);
+		});
+	});
 }
 
 /**
@@ -52,6 +52,11 @@ function logErr(err, seperator, preMessage, simplify) {
  * @param {Object} msg - the link data list of links in the form {links: ["link", "link", "link"], linksPw: "passwd", saveLoc: "/path/to/save"}
  */
 function sbmtLinks(ws, msg) {
+	// *** TO DO ***
+	
+	
+	
+	
 	for (const pointName of Object.keys(settings.endPoints)) {
 		if (sendExsistingFirst) wsSendPoint(ws, null, settings.endPoints[pointName], 'Error from updateEndPoints() updating ' + pointName + ': '); // send existing data immediatly
 		endpointTick(settings.endPoints[pointName], ws);
