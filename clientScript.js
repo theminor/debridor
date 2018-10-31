@@ -1,5 +1,6 @@
 function submitBtn() { skt.send(JSON.stringify({
 	links: document.getElementById('linksBox').value,
+	linksPw: document.getElementById('linkPwInput').value,
 	saveLoc: document.getElementById('saveLocationSelect').value;
 })); }
 
