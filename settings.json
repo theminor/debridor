@@ -5,5 +5,10 @@
 		"port": 34982,
 		"name": "debridor",
 		"pingInterval": 10000
+	},
+	"debridAccount": {
+		"username": "user",
+		"password": "pass",
+		"apiBaseURL": "https://api.real-debrid.com/rest/1.0/"
 	}
 }
