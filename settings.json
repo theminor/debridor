@@ -1,0 +1,9 @@
+{
+	"server": {
+		"https": false,
+		"address": "example.com/debridor/",
+		"port": 34982,
+		"name": "debridor",
+		"pingInterval": 10000
+	}
+}
