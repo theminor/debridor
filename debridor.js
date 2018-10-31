@@ -27,7 +27,7 @@ function logErr(err, seperator, preMessage, simplify) {
  * @param {string} [name] - short name of the request (for error handling only)
  * @returns {Promise} Returned data. If JSON was returned, the Promise will resolve into an Object. Otherwise, as a string.
  */
- function fetchWebDta (url, options, name) {
+function fetchWebDta (url, options, name) {
 	return new Promise((resolve, reject) => {
 		let req = http.request(url, options, (res) => {
 			let dta = '';
@@ -51,8 +51,16 @@ function logErr(err, seperator, preMessage, simplify) {
  * @param {Object} ws - the websocket on which to send updated endpoint data
  * @param {Object} msg - the link data list of links in the form {links: ["link", "link", "link"], linksPw: "passwd", saveLoc: "/path/to/save"}
  */
-function sbmtLinks(ws, msg) {
+async function sbmtLinks(ws, msg) {
+	let unrestrictedLinks = [];
+	msg.links.forEach(link => unrestrictedLinks.push(await fetchWebDta(link, {method: "POST", headers: { Authorization: "Bearer " + settings.debridAccount.apiToken }, timeout: settings.debridAccount.requestTimeout})));
+	
+	
+	
 	// *** TO DO ***
+	
+	
+	
 	
 	
 	
