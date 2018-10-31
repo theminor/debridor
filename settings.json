@@ -8,7 +8,8 @@
 	},
 	"debridAccount": {
 		"apiToken": "XXXXXXXXXX",
-		"apiBaseUrl": "https://api.real-debrid.com/rest/1.0/"
+		"apiBaseUrl": "https://api.real-debrid.com/rest/1.0/",
+		"requestTimeout": 10000
 	},
 	"apiMethods": {
 		"unrestrict/link": {
