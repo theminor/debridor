@@ -2,6 +2,7 @@
 const fs = require('fs');
 const http = require('http');  // const https = require('https');
 const WebSocket = require('ws');
+const path = require('path');
 const settings = require('./settings.json');
 
 
@@ -25,24 +26,35 @@ function logErr(err, seperator, preMessage, simplify) {
  * @param {string} url - the url to fetch
  * @param {Object} options - the request options (see http.request options in node.js api)
  * @param {string} [name=url] - short name of the request (for error handling only)
+ * @param {string} [saveLoc] - file name with path specifying where to save teh downloaded file. If not specified, the file is not saved and is just returned.
  * @param {Function} [progressFunc] - a function that is called after each chunk is recieved - sole parameter is an object like this: {downloaded: number, totalSize: number}
- * @returns {Promise} Returned data. If JSON was returned, the Promise will resolve into an Object. Otherwise, as a string.
+ * @returns {Promise} Returned data. If JSON was returned, the Promise will resolve into an Object. Otherwise, as a string. If saveLoc is specified, this will instead return a string specifying the saved file location
  */
-function fetchWebDta(url, options, name, progressFunc) {
+function fetchWebDta(url, options, name, saveLoc, progressFunc) {
 	return new Promise((resolve, reject) => {
 		let req = http.request(url, options, (res) => {
+			res.on('error', err => { err.message = 'Error in fetchWebDta(' + url + '): ' + err.message; reject(err); });
 			let dta = '';
 			let responseSize = parseInt(res.headers['content-length'], 10);
             let currentSize = 0;
-			resp.on('error', err => { err.message = 'Error in fetchWebDta(' + url + '): ' + err.message; reject(err); });
-			resp.on('data', chunk => {
-				dta += chunk;
-				currentSize += chunk.length;
-				if (progressFunc) progressFunc(downloaded: currentSize, totalSize: responseSize);
-			});
-			resp.on('end', () => {
-				try { resolve(JSON.parse(dta)); }
-				catch (err) { resolve(dta); }
+			let file = false;
+			if (saveLoc) {
+				file = fs.createWriteStream(saveLoc);
+				res.pipe(file)
+			} else {
+				res.on('data', chunk => {
+					dta += chunk;
+					currentSize += chunk.length;
+					if (progressFunc) progressFunc({downloaded: currentSize, totalSize: responseSize});
+				});
+			}
+			res.on('end', () => {
+				if (file) {
+					resolve(saveLoc)
+				} else {
+					try { resolve(JSON.parse(dta)); }
+					catch (err) { resolve(dta); }
+				}
 			});			
 		});
 		req.on('timeout', () => {
@@ -54,23 +66,36 @@ function fetchWebDta(url, options, name, progressFunc) {
 }
 
 /**
+ * Send a data on the given websocket
+ * @param {Object} [ws] - the websocket object. If not specified, nothing is sent
+ * @param {Object} [wss] - the full set of ws clients (in which case, it will update all clients)
+ * @param {Object} dta - the data to send
+ * @param {String} errMsg - pre-error message to identify errors by
+ */
+function wsSendData(ws, wss, dta, errMsg) {
+	if (wss) wss.clients.forEach(ws => wsSendPoint(ws, null, dta, 'From wsSendPoint(): '));
+	if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(dta), err => { if (err) { err.message = 'Websocket Send Error: ' + errMsg + ': ' + err.message; logErr(err); } });
+}
+
+/**
  * Handle a link
  * @param {Object} ws - the websocket on which to send updated endpoint data
+ * @param {Object} wss - the full set of ws clients
  * @param {String} url - the link to handle
+ * @param {String} [saveDir] - the base directory in which to save the file (for example "/home/user/downloads/"). If not specified, the 
  */
-async function handleLink(ws, url) {
-	fetchWebDta(url, options, name, progressFunc)
-	// *** TO DO ***
-
+async function handleLink(ws, wss, url, saveDir) {	
+	return await fetchWebDta(url, {timeout: settings.debridAccount.requestTimeout}, null, (dta) => wsSendPoint(ws, wss, dta, 'From handleLink(): '), saveDir + path.basename(url));
 }
 
 /**
  * Take a list of links and return unrestricted Links from real debrid
  * @param {Object} ws - the websocket on which to send updated endpoint data
- * @param {Object} msg - the link data list of links in the form {links: ["link", "link", "link"], linksPw: "passwd", saveLoc: "/path/to/save"}
+ * @param {Object} wss - the full set of ws clients
+ * @param {Object} msg - the link data list of links in the form {links: ["link", "link", "link"], linksPw: "passwd", saveDir: "/path/to/save"}
  */
-async function sbmtLinks(ws, msg) {
-	msg.links.forEach(link => handleLink(ws, await fetchWebDta(link, {method: "POST", headers: { Authorization: "Bearer " + settings.debridAccount.apiToken }, timeout: settings.debridAccount.requestTimeout})));
+async function sbmtLinks(ws, wss, msg) {
+	msg.links.forEach(link => handleLink(ws, wss, await fetchWebDta(link, {method: "POST", headers: { Authorization: "Bearer " + settings.debridAccount.apiToken }, timeout: settings.debridAccount.requestTimeout})), msg.saveDir);
 }
 
 /**
@@ -113,7 +138,7 @@ server.listen(settings.server.port, err => {
 				return ws.terminate();
 			}
 			ws.isAlive = true;
-			ws.on('message', message => sbmtLinks(ws, JSON.parse(message)));
+			ws.on('message', message => sbmtLinks(ws, wss, JSON.parse(message)));
 			ws.on('pong', () => ws.isAlive = true);
 			ws.pingTimer = setInterval(() => {
 				if (ws.isAlive === false) return closeWs(ws);
