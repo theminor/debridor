@@ -32,6 +32,7 @@ function logErr(err, seperator, preMessage, simplify) {
  * @returns {Promise} Returned data. If JSON was returned, the Promise will resolve into an Object. Otherwise, as a string. If saveLoc is specified, this will instead return a string specifying the saved file location
  */
 function fetchWebDta(url, options, name, saveLoc, progressFunc) {
+	console.log("fwd url: " + url);
 	return new Promise((resolve, reject) => {
 		let file = false;
 		if (saveLoc) {
@@ -89,7 +90,7 @@ function wsSendData(ws, wss, dta, errMsg) {
  * @param {String} [saveDir] - the base directory in which to save the file (for example "/home/user/downloads/"). If not specified, the 
  */
 async function handleLink(ws, wss, url, saveDir) {
-	console.log(url);
+	console.log("url: " + url);
 	let unrestrictedLink = await fetchWebDta(url, {timeout: settings.debridAccount.requestTimeout}, null, (dta) => wsSendData(ws, wss, dta, 'From handleLink(): '), saveDir + path.basename(url));
 	wsSendData(ws, wss, unrestrictedLink, 'From handleLink() - url send: ');
 	return unrestrictedLink;
