@@ -96,8 +96,7 @@ async function handleLink(ws, wss, url, saveDir) {
  */
 function sbmtLinks(ws, wss, msg) {
 	msg.links.forEach(
-		async link => {
-			return handleLink(
+		async link => handleLink(
 				ws,
 				wss,
 				await fetchWebDta(
@@ -109,8 +108,7 @@ function sbmtLinks(ws, wss, msg) {
 					}
 				),
 				msg.saveDir
-			);
-		}
+			)
 	);
 }
 
