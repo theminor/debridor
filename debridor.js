@@ -52,7 +52,7 @@ function fetchWebDta(url, options, name, saveLoc, progressFunc) {
 					currentSize += chunk.length;
 					if (progressFunc) progressFunc({downloaded: currentSize, totalSize: responseSize});
 				});
-//			}
+			}
 			res.on('end', () => {
 				if (file) resolve(saveLoc);
 				else {
@@ -60,7 +60,7 @@ function fetchWebDta(url, options, name, saveLoc, progressFunc) {
 					catch (err) { resolve(dta); }
 				}
 			});			
-}		});
+		});
 		req.on('timeout', () => {
 			let err = new Error('Error in fetchWebDta(): Timeout requesting ' + url);
 			err.simpleMessage = 'fetchWebDta(): timeout fetching from ' + (name || url);
@@ -89,6 +89,7 @@ function wsSendData(ws, wss, dta, errMsg) {
  * @param {String} [saveDir] - the base directory in which to save the file (for example "/home/user/downloads/"). If not specified, the 
  */
 async function handleLink(ws, wss, url, saveDir) {
+	console.log(url);
 	let unrestrictedLink = await fetchWebDta(url, {timeout: settings.debridAccount.requestTimeout}, null, (dta) => wsSendData(ws, wss, dta, 'From handleLink(): '), saveDir + path.basename(url));
 	wsSendData(ws, wss, unrestrictedLink, 'From handleLink() - url send: ');
 	return unrestrictedLink;
