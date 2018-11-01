@@ -77,7 +77,7 @@ function fetchWebDta(url, options, name, saveLoc, progressFunc) {
  * @param {String} errMsg - pre-error message to identify errors by
  */
 function wsSendData(ws, wss, dta, errMsg) {
-	if (wss) wss.clients.forEach(ws => wsSendPoint(ws, null, dta, 'From wsSendPoint(): '));
+	if (wss) wss.clients.forEach(ws => wsSendData(ws, null, dta, 'From wsSendData(): '));
 	if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(dta), err => { if (err) { err.message = 'Websocket Send Error: ' + errMsg + ': ' + err.message; logErr(err); } });
 }
 
@@ -88,8 +88,10 @@ function wsSendData(ws, wss, dta, errMsg) {
  * @param {String} url - the link to handle
  * @param {String} [saveDir] - the base directory in which to save the file (for example "/home/user/downloads/"). If not specified, the 
  */
-async function handleLink(ws, wss, url, saveDir) {	
-	return await fetchWebDta(url, {timeout: settings.debridAccount.requestTimeout}, null, (dta) => wsSendPoint(ws, wss, dta, 'From handleLink(): '), saveDir + path.basename(url));
+async function handleLink(ws, wss, url, saveDir) {
+	let unrestrictedLink = await fetchWebDta(url, {timeout: settings.debridAccount.requestTimeout}, null, (dta) => wsSendData(ws, wss, dta, 'From handleLink(): '), saveDir + path.basename(url));
+	wsSendData(ws, wss, unrestrictedLink, 'From handleLink() - url send: ');
+	return unrestrictedLink;
 }
 
 /**
