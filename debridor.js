@@ -100,7 +100,7 @@ function submitLinks(ws, links, storeageDir, linksPasswd) {
 				wsSendData(ws, 'unrestricting link: ' + lnk);
 				let unRestLnk = await unrestrictLink(lnk, linksPasswd);
 				wsSendData(ws, 'downloading from unrestricted link: ' + unRestLnk);
-				let successDir = downloadFile(unRestLnk, storeageDir + path.basename(lnk));
+				let successDir = await downloadFile(unRestLnk, storeageDir + path.basename(lnk));
 				wsSendData(ws, 'file saved to ' + successDir);
 			});
 		}
