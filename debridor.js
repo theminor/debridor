@@ -95,21 +95,7 @@ async function handleLink(ws, wss, url, saveDir) {
  * @param {Object} msg - the link data list of links in the form {links: ["link", "link", "link"], linksPw: "passwd", saveDir: "/path/to/save"}
  */
 function sbmtLinks(ws, wss, msg) {
-	msg.links.forEach(
-		async link => handleLink(
-				ws,
-				wss,
-				await fetchWebDta(
-					link,
-					{
-						method: "POST",
-						headers: { Authorization: "Bearer " + settings.debridAccount.apiToken },
-						timeout: settings.debridAccount.requestTimeout
-					}
-				),
-				msg.saveDir
-			)
-	);
+	msg.links.forEach(async link => handleLink(ws, wss, await fetchWebDta(link,	{ method: "POST", headers: { Authorization: "Bearer " + settings.debridAccount.apiToken }, timeout: settings.debridAccount.requestTimeout }), msg.saveDir));
 }
 
 /**
