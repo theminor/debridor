@@ -96,9 +96,9 @@ function wsSendData(ws, wss, dta, errMsg) {
  */
 async function handleLink(ws, wss, url, saveDir, linkPw) {
 	console.log("url: " + url);
-	let unrestrictedLink = await fetchWebDta(url, {timeout: settings.debridAccount.requestTimeout},	null, saveDir + path.basename(url), (dta) => wsSendData(ws, wss, dta, 'From handleLink(): '), {link: url, password: linkPw});
-	wsSendData(ws, wss, unrestrictedLink, 'From handleLink() - url send: ');
-	return unrestrictedLink;
+	let unrestrictedLinkDta = await fetchWebDta(url, {timeout: settings.debridAccount.requestTimeout},	null, saveDir + path.basename(url), (dta) => wsSendData(ws, wss, dta, 'From handleLink(): '), {link: url, password: linkPw});
+	wsSendData(ws, wss, unrestrictedLinkDta.download, 'From handleLink() - url send: ');
+	return unrestrictedLinkDta.download;
 }
 
 /**
