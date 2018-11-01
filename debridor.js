@@ -33,16 +33,20 @@ function logErr(err, seperator, preMessage, simplify) {
  */
 function fetchWebDta(url, options, name, saveLoc, progressFunc) {
 	return new Promise((resolve, reject) => {
-		let req = https.request(url, options, (res) => {	// // *** TO DO: handle http requests
+		let file = false;
+		if (saveLoc) {
+			file = fs.createWriteStream(saveLoc);
+			file.on('finish', () => resolve(saveLoc));
+			file.on('close', () => resolve(saveLoc));
+			file.on('error', err => reject(err));
+		}
+		let req = https.request(url, options, res => {	// // *** TO DO: handle http requests
 			res.on('error', err => { err.message = 'Error in fetchWebDta(' + url + '): ' + err.message; reject(err); });
 			let dta = '';
 			let responseSize = parseInt(res.headers['content-length'], 10);
             let currentSize = 0;
-			let file = false;
-			if (saveLoc) {
-				file = fs.createWriteStream(saveLoc);
-				res.pipe(file)
-			} else {
+			if (saveLoc) res.pipe(file);
+			else {
 				res.on('data', chunk => {
 					dta += chunk;
 					currentSize += chunk.length;
@@ -50,9 +54,8 @@ function fetchWebDta(url, options, name, saveLoc, progressFunc) {
 				});
 			}
 			res.on('end', () => {
-				if (file) {
-					resolve(saveLoc)
-				} else {
+				if (file) resolve(saveLoc);
+				else {
 					try { resolve(JSON.parse(dta)); }
 					catch (err) { resolve(dta); }
 				}
