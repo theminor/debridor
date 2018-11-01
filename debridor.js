@@ -97,10 +97,17 @@ async function handleLink(ws, wss, url, saveDir) {
 async function sbmtLinks(ws, wss, msg) {
 	msg.links.forEach(
 		link => handleLink(
-			ws, wss, await fetchWebDta(
-				link, {method: "POST", headers: { Authorization: "Bearer " + settings.debridAccount.apiToken }, timeout: settings.debridAccount.requestTimeout}
-			)
-		), msg.saveDir
+			ws,
+			wss,
+			await fetchWebDta(
+				link,	{
+							method: "POST",
+							headers: { Authorization: "Bearer " + settings.debridAccount.apiToken },
+							timeout: settings.debridAccount.requestTimeout
+						}
+			),
+			msg.saveDir
+		)
 	);
 }
 
