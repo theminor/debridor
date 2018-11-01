@@ -93,14 +93,17 @@ function downloadFile(url, storeLocation) {
  * @param {Object} [linksPasswd] - password for the links (if any)
  */
 function submitLinks(ws, links, storeageDir, linksPasswd) {	
-	fs.access(storeageDir, fs.constants.W_OK, err => if (err) return err else {  // ensure directory is writable by this process
-		links.forEach(async lnk => {
-			wsSendData(ws, 'unrestricting link: ' + lnk);
-			let unRestLnk = await unrestrictLink(lnk, linksPasswd);
-			wsSendData(ws, 'downloading from unrestricted link: ' + unRestLnk);
-			let successDir = downloadFile(unRestLnk, storeLocation + path.basename(lnk));
-			wsSendData(ws, 'file saved to ' + successDir);
-		});
+	fs.access(storeageDir, fs.constants.W_OK, err => {
+		if (err) return err;
+		else {  // ensure directory is writable by this process
+			links.forEach(async lnk => {
+				wsSendData(ws, 'unrestricting link: ' + lnk);
+				let unRestLnk = await unrestrictLink(lnk, linksPasswd);
+				wsSendData(ws, 'downloading from unrestricted link: ' + unRestLnk);
+				let successDir = downloadFile(unRestLnk, storeLocation + path.basename(lnk));
+				wsSendData(ws, 'file saved to ' + successDir);
+			});
+		}
 	});	
 }
 
