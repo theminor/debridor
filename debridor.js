@@ -27,11 +27,12 @@ function logErr(err, seperator, preMessage, simplify) {
  * @param {string} url - the url to fetch
  * @param {Object} options - the request options (see http.request options in node.js api)
  * @param {string} [name=url] - short name of the request (for error handling only)
- * @param {string} [saveLoc] - file name with path specifying where to save teh downloaded file. If not specified, the file is not saved and is just returned.
+ * @param {string} [saveLoc] - file name with path specifying where to save the downloaded file. If not specified, the file is not saved and is just returned.
  * @param {Function} [progressFunc] - a function that is called after each chunk is recieved - sole parameter is an object like this: {downloaded: number, totalSize: number}
+ * @param {Object} [postDta] - the data to post or send with the request
  * @returns {Promise} Returned data. If JSON was returned, the Promise will resolve into an Object. Otherwise, as a string. If saveLoc is specified, this will instead return a string specifying the saved file location
  */
-function fetchWebDta(url, options, name, saveLoc, progressFunc) {
+function fetchWebDta(url, options, name, saveLoc, progressFunc, postDta) {
 	console.log("DEBUG: fwd url: " + url);
 	return new Promise((resolve, reject) => {
 		let file = false;
@@ -69,6 +70,7 @@ function fetchWebDta(url, options, name, saveLoc, progressFunc) {
 			err.simpleMessage = 'fetchWebDta(): timeout fetching from ' + (name || url);
 			reject(err);
 		});
+		req.write(postDta);
 	});
 }
 
@@ -90,10 +92,11 @@ function wsSendData(ws, wss, dta, errMsg) {
  * @param {Object} wss - the full set of ws clients
  * @param {String} url - the link to handle
  * @param {String} [saveDir] - the base directory in which to save the file (for example "/home/user/downloads/"). If not specified, the 
+ * @param {String} [linkPw] - the link password, if any
  */
-async function handleLink(ws, wss, url, saveDir) {
+async function handleLink(ws, wss, url, saveDir, linkPw) {
 	console.log("url: " + url);
-	let unrestrictedLink = await fetchWebDta(url, {timeout: settings.debridAccount.requestTimeout}, null, (dta) => wsSendData(ws, wss, dta, 'From handleLink(): '), saveDir + path.basename(url));
+	let unrestrictedLink = await fetchWebDta(url, {timeout: settings.debridAccount.requestTimeout},	null, saveDir + path.basename(url), (dta) => wsSendData(ws, wss, dta, 'From handleLink(): '), {link: url, password: linkPw});
 	wsSendData(ws, wss, unrestrictedLink, 'From handleLink() - url send: ');
 	return unrestrictedLink;
 }
@@ -105,7 +108,7 @@ async function handleLink(ws, wss, url, saveDir) {
  * @param {Object} msg - the link data list of links in the form {links: ["link", "link", "link"], linksPw: "passwd", saveDir: "/path/to/save"}
  */
 function sbmtLinks(ws, wss, msg) {
-	msg.links.forEach(async link => handleLink(ws, wss, await fetchWebDta(link,	{ method: "POST", headers: { Authorization: "Bearer " + settings.debridAccount.apiToken }, timeout: settings.debridAccount.requestTimeout }), msg.saveDir));
+	msg.links.forEach(async link => handleLink(ws, wss, await fetchWebDta(link,	{ method: "POST", headers: { Authorization: "Bearer " + settings.debridAccount.apiToken }, timeout: settings.debridAccount.requestTimeout }), msg.saveDir, msg.linksPw));
 }
 
 /**
