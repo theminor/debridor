@@ -9,110 +9,99 @@ const settings = require('./settings.json');
 
 /**
  * Log an Error Message; Optionally simplify the output
- * @param {Error} err - an error Object that was thrown
- * @param {String} [seperator=" --> "] - a string used to seperate parts of the error ourput
- * @param {String} [preMessage="\n***${date}***"] - a string that is prepended to each error message
- * @param {Boolean | String} [simplify=false] - if true, the output will be shortened and will not include the lengthy stack trace data; if a String is recieved for the simplify parameter, the error message will be replaced with the String; if the err Object includes a custom "simpleMessage" property (whether or not the simplify paramter is true), the simpleMessage property will be used without lengthy trace info
+ * @param {Error | String} err - an error Object that was thrown
+ * @returns {Error} the error as an Error object (even if a srring was supplied)
  */
-function logErr(err, seperator, preMessage, simplify) {
-	if (!seperator) seperator = ' --> ';
-	if (!preMessage) preMessage = '\n*** ' + new Date().toLocaleString() + ' ***  ';
-	if (simplify && typeof(simplify) === 'string') console.warn(preMessage + simplify);
-	else if (err.simpleMessage) console.warn(preMessage + err.simpleMessage);
-	else console.warn(preMessage + err.message + (simplify ? '' : seperator + err.stack));
-}
-
-/**
- * Make a web request and return the retrieved JSON or other data (as a promise)
- * @param {string} url - the url to fetch
- * @param {Object} options - the request options (see http.request options in node.js api)
- * @param {string} [name=url] - short name of the request (for error handling only)
- * @param {string} [saveLoc] - file name with path specifying where to save the downloaded file. If not specified, the file is not saved and is just returned.
- * @param {Function} [progressFunc] - a function that is called after each chunk is recieved - sole parameter is an object like this: {downloaded: number, totalSize: number}
- * @param {Object} [postDta] - the data to post or send with the request
- * @returns {Promise} Returned data. If JSON was returned, the Promise will resolve into an Object. Otherwise, as a string. If saveLoc is specified, this will instead return a string specifying the saved file location
- */
-function fetchWebDta(url, options, name, saveLoc, progressFunc, postDta) {
-	console.log("DEBUG: fwd url: " + url);
-	return new Promise((resolve, reject) => {
-		let file = false;
-		if (saveLoc) {
-			file = fs.createWriteStream(saveLoc);
-			file.on('finish', () => resolve(saveLoc));
-			file.on('close', () => resolve(saveLoc));
-			file.on('error', err => { err.message = 'Error in fetchWebDta(' + url + ') - file error: ' + err.message; reject(err); });
-		}
-		console.log("DEBUG: req: " + url + " - " + JSON.stringify(options));
-		let req = https.request(url, options, res => {	// // *** TO DO: handle http requests
-			console.log("DEBUG: in req: " + url);
-			res.on('error', err => { err.message = 'Error in fetchWebDta(' + url + ') - request: ' + err.message; reject(err); });
-			let dta = '';
-			let responseSize = parseInt(res.headers['content-length'], 10);
-            let currentSize = 0;
-			console.log("DEBUG: if saveLoc-pipe: " + url);
-			if (saveLoc) res.pipe(file);
-			else {
-				res.on('data', chunk => {
-					console.log("DEBUG: dta chunk: " + chunk);
-					dta += chunk;
-					currentSize += chunk.length;
-					if (progressFunc) progressFunc({downloaded: currentSize, totalSize: responseSize});
-				});
-			}
-			res.on('end', () => {
-				console.log("DEBUG: dta end: " + url);
-				if (file) resolve(saveLoc);
-				else {
-					console.log("DEBUG: unris url: " + dta);
-					try { resolve(JSON.parse(dta)); }
-					catch (err) { resolve(dta); }
-				}
-			});			
-		});
-		req.on('timeout', () => {
-			let err = new Error('Error in fetchWebDta(): Timeout requesting ' + url);
-			err.simpleMessage = 'fetchWebDta(): timeout fetching from ' + (name || url);
-			reject(err);
-		});
-		req.write(postDta);
-	});
+function logErr(err) {
+	if (typeof err === 'string') err = new Error(err);
+	console.warn('\n*** ' + new Date().toLocaleString() + ' ***  ' + err.message + ' --> ' + err.stack);
+	return err;
 }
 
 /**
  * Send a data on the given websocket
  * @param {Object} [ws] - the websocket object. If not specified, nothing is sent
- * @param {Object} [wss] - the full set of ws clients (in which case, it will update all clients)
  * @param {Object} dta - the data to send
- * @param {String} errMsg - pre-error message to identify errors by
  */
-function wsSendData(ws, wss, dta, errMsg) {
-	if (wss) wss.clients.forEach(ws => wsSendData(ws, null, dta, 'From wsSendData(): '));
-	if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(dta), err => { if (err) { err.message = 'Websocket Send Error: ' + errMsg + ': ' + err.message; logErr(err); } });
+function wsSendData(ws, dta) {
+	if (ws && ws.readyState === WebSocket.OPEN) ws.send(
+		JSON.stringify(dta),
+		err => err ? logErr(err) : true
+	);
 }
 
 /**
- * Handle a link
- * @param {Object} ws - the websocket on which to send updated endpoint data
- * @param {Object} wss - the full set of ws clients
+ * Handle a link - unrestrict the link from real debrid
  * @param {String} url - the link to handle
- * @param {String} [saveDir] - the base directory in which to save the file (for example "/home/user/downloads/"). If not specified, the 
  * @param {String} [linkPw] - the link password, if any
+ * @returns {Promise} resolves into string: url of the unrestricted link
  */
-async function handleLink(ws, wss, url, saveDir, linkPw) {
-	console.log("url: " + url);
-	let unrestrictedLinkDta = await fetchWebDta(url, {timeout: settings.debridAccount.requestTimeout},	null, saveDir + path.basename(url), (dta) => wsSendData(ws, wss, dta, 'From handleLink(): '), {link: url, password: linkPw});
-	wsSendData(ws, wss, unrestrictedLinkDta.download, 'From handleLink() - url send: ');
-	return unrestrictedLinkDta.download;
+function unrestrictLink(url, linkPw) {
+	return new Promise((resolve, reject) => {
+		let req = https.request(  // *** TO DO: handle http requests
+			settings.debridAccount.apiBaseUrl + 'unrestrict/link',  // probably https://api.real-debrid.com/rest/1.0/unrestrict/link 
+			{ method: "POST", headers: { Authorization: "Bearer " + settings.debridAccount.apiToken }, timeout: settings.debridAccount.requestTimeout },
+			res => {
+				let dta = '';
+				res.on('error', err => reject(logErr(err)));
+				res.on('data', chunk => dta += chunk);
+				res.on('end', () => resolve(JSON.parse(dta).download));  // per the api, "link" is the origional linke, and "download" is the unrestrivted link 
+			}
+		);	
+		req.on('timeout', () => reject(logErr('Timeout getting unrestricted link from real debrid, url: ' + url)));
+		req.end('link=' + url + (linkPw ? '&password=' + linkPw : ''));
+	});
+}
+
+/**
+ * Download a file from a given url and save to a given location
+ * @param {String} url - the url of the file to download
+ * @param {String} storeLocation - full path and filename at which to store the downloaded file
+ * @returns {Promise} resolves to storeLocation - the location where the file was successfully saved
+ */
+function downloadFile(url, storeLocation) {
+	return new Promise((resolve, reject) => {
+		let file = fs.createWriteStream(storeLocation);
+		function dlErrHandle(req, err) {
+			req.abort();
+			file.close();
+			fs.unlink(storeLocation);
+			reject(logErr(err))
+		}
+		let req = https.get(  // *** TO DO: handle http requests
+			url,
+			{timeout: settings.debridAccount.requestTimeout},
+			res => {
+				if (res.statusCode !== 200) dlErrHandle(req, 'Status code for file at ' + url + ' was ' + res.statusCode + ' (expecting status code 200)');
+				let dta = '';
+				res.on('error', err => dlErrHandle(req, err));
+				file.on('finish', () => resolve(storeLocation));
+				res.pipe(file);
+			}
+		);
+		req.on('error', err => dlErrHandle(req, err));
+		req.on('timeout', () => dlErrHandle(req, 'Timeout requesting file at ' + url));		
+		file.on('error', err => dlErrHandle(req, err));
+	});
 }
 
 /**
  * Take a list of links and return unrestricted Links from real debrid
  * @param {Object} ws - the websocket on which to send updated endpoint data
- * @param {Object} wss - the full set of ws clients
- * @param {Object} msg - the link data list of links in the form {links: ["link", "link", "link"], linksPw: "passwd", saveDir: "/path/to/save"}
+ * @param {Array} links - array of strings continaing the urls to unrestrict and then download
+ * @param {Array} storeageDir - directory at which to store the downloaded files
+ * @param {Object} [linksPasswd] - password for the links (if any)
  */
-function sbmtLinks(ws, wss, msg) {
-	msg.links.forEach(async link => handleLink(ws, wss, await fetchWebDta(link,	{ method: "POST", headers: { Authorization: "Bearer " + settings.debridAccount.apiToken }, timeout: settings.debridAccount.requestTimeout }), msg.saveDir, msg.linksPw));
+function submitLinks(ws, links, storeageDir, linksPasswd) {	
+	fs.access(storeageDir, fs.constants.W_OK, err => if (err) return err else {  // ensure directory is writable by this process
+		links.forEach(async lnk => {
+			wsSendData(ws, 'unrestricting link: ' + lnk);
+			let unRestLnk = await unrestrictLink(lnk, linksPasswd);
+			wsSendData(ws, 'downloading from unrestricted link: ' + unRestLnk);
+			let successDir = downloadFile(unRestLnk, storeLocation + path.basename(lnk));
+			wsSendData(ws, 'file saved to ' + successDir);
+		});
+	});	
 }
 
 /**
@@ -125,8 +114,8 @@ server.filesCache = {
 	"clientScript.js": {"path": "./clientScript.js", "head": { "Content-Type": "text/javascript" }}
 };
 for (const fileName of Object.keys(server.filesCache)) {
-	fs.readFile(server.filesCache[fileName].path, function(err, data) {
-		if (err) { err.message = 'fs error getting file ' + fileName + ': ' + err.message; return logErr(err); throw(err); }
+	fs.readFile(server.filesCache[fileName].path, (err, data) => {
+		if (err) { return logErr(err); throw(err); }
 		else server.filesCache[fileName].contents = data;
 	});	
 }
@@ -142,20 +131,20 @@ server.on('request', (request, response) => {
 			response.writeHead(404, {"Content-Type": "text/plain"});
 			response.end('404 Not Found\n');	
 		}
-	} catch(err) { err.message = 'Error in server.on("request") for url ' + request.url + ': ' + err.message; logErr(err); }
+	} catch(err) { logErr(err); }
 });
 server.listen(settings.server.port, err => {
-	if (err) { err.message = 'Server Error: ' + err.message; return logErr(err); }
+	if (err) { return logErr(err); }
 	else {
 		const wss = new WebSocket.Server({server});
 		wss.on('connection', ws => {
 			function closeWs(ws, err) {
-				if (err && !err.message.includes('CLOSED')) console.warn('pingTimer error: ' + err.toString() + '\n' + err.stack);
+				if (err) logErr(err);
 				clearInterval(ws.pingTimer);
 				return ws.terminate();
 			}
 			ws.isAlive = true;
-			ws.on('message', message => sbmtLinks(ws, wss, JSON.parse(message)));
+			ws.on('message', msg => submitLinks(ws, JSON.parse(msg).links, JSON.parse(msg).saveLoc, JSON.parse(msg).linksPw));
 			ws.on('pong', () => ws.isAlive = true);
 			ws.pingTimer = setInterval(() => {
 				if (ws.isAlive === false) return closeWs(ws);
