@@ -94,9 +94,9 @@ async function handleLink(ws, wss, url, saveDir) {
  * @param {Object} wss - the full set of ws clients
  * @param {Object} msg - the link data list of links in the form {links: ["link", "link", "link"], linksPw: "passwd", saveDir: "/path/to/save"}
  */
-async function sbmtLinks(ws, wss, msg) {
+function sbmtLinks(ws, wss, msg) {
 	msg.links.forEach(
-		link => {
+		async link => {
 			let wdta = await fetchWebDta(
 					link,
 					{
