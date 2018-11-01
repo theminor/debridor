@@ -44,19 +44,23 @@ function fetchWebDta(url, options, name, saveLoc, progressFunc, postDta) {
 		}
 		console.log("DEBUG: req: " + url + " - " + JSON.stringify(options));
 		let req = https.request(url, options, res => {	// // *** TO DO: handle http requests
+			console.log("DEBUG: in req: " + url);
 			res.on('error', err => { err.message = 'Error in fetchWebDta(' + url + ') - request: ' + err.message; reject(err); });
 			let dta = '';
 			let responseSize = parseInt(res.headers['content-length'], 10);
             let currentSize = 0;
+			console.log("DEBUG: if saveLoc-pipe: " + url);
 			if (saveLoc) res.pipe(file);
 			else {
 				res.on('data', chunk => {
+					console.log("DEBUG: dta chunk: " + chunk);
 					dta += chunk;
 					currentSize += chunk.length;
 					if (progressFunc) progressFunc({downloaded: currentSize, totalSize: responseSize});
 				});
 			}
 			res.on('end', () => {
+				console.log("DEBUG: dta end: " + url);
 				if (file) resolve(saveLoc);
 				else {
 					console.log("DEBUG: unris url: " + dta);
