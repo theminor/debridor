@@ -38,10 +38,10 @@ function fetchWebDta(url, options, name, saveLoc, progressFunc) {
 			file = fs.createWriteStream(saveLoc);
 			file.on('finish', () => resolve(saveLoc));
 			file.on('close', () => resolve(saveLoc));
-			file.on('error', err => reject(err));
+			file.on('error', err => { err.message = 'Error in fetchWebDta(' + url + ') - file error: ' + err.message; reject(err); });
 		}
 		let req = https.request(url, options, res => {	// // *** TO DO: handle http requests
-			res.on('error', err => { err.message = 'Error in fetchWebDta(' + url + '): ' + err.message; reject(err); });
+			res.on('error', err => { err.message = 'Error in fetchWebDta(' + url + ') - request: ' + err.message; reject(err); });
 			let dta = '';
 			let responseSize = parseInt(res.headers['content-length'], 10);
             let currentSize = 0;
@@ -52,7 +52,7 @@ function fetchWebDta(url, options, name, saveLoc, progressFunc) {
 					currentSize += chunk.length;
 					if (progressFunc) progressFunc({downloaded: currentSize, totalSize: responseSize});
 				});
-			}
+//			}
 			res.on('end', () => {
 				if (file) resolve(saveLoc);
 				else {
@@ -60,7 +60,7 @@ function fetchWebDta(url, options, name, saveLoc, progressFunc) {
 					catch (err) { resolve(dta); }
 				}
 			});			
-		});
+}		});
 		req.on('timeout', () => {
 			let err = new Error('Error in fetchWebDta(): Timeout requesting ' + url);
 			err.simpleMessage = 'fetchWebDta(): timeout fetching from ' + (name || url);
