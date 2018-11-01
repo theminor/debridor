@@ -41,6 +41,7 @@ function fetchWebDta(url, options, name, saveLoc, progressFunc) {
 			file.on('close', () => resolve(saveLoc));
 			file.on('error', err => { err.message = 'Error in fetchWebDta(' + url + ') - file error: ' + err.message; reject(err); });
 		}
+		console.log("DEBUG: req: " + url + " - " + JSON.stringify(options));
 		let req = https.request(url, options, res => {	// // *** TO DO: handle http requests
 			res.on('error', err => { err.message = 'Error in fetchWebDta(' + url + ') - request: ' + err.message; reject(err); });
 			let dta = '';
