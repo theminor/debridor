@@ -1,6 +1,7 @@
 'use strict';
 const fs = require('fs');
-const http = require('http');  // const https = require('https');
+const http = require('http');
+const https = require('https');
 const WebSocket = require('ws');
 const path = require('path');
 const settings = require('./settings.json');
@@ -32,7 +33,7 @@ function logErr(err, seperator, preMessage, simplify) {
  */
 function fetchWebDta(url, options, name, saveLoc, progressFunc) {
 	return new Promise((resolve, reject) => {
-		let req = http.request(url, options, (res) => {
+		let req = https.request(url, options, (res) => {	// // *** TO DO: handle http requests
 			res.on('error', err => { err.message = 'Error in fetchWebDta(' + url + '): ' + err.message; reject(err); });
 			let dta = '';
 			let responseSize = parseInt(res.headers['content-length'], 10);
