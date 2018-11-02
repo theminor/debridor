@@ -95,9 +95,9 @@ function downloadFile(url, storeLocation, ws) {
 			{timeout: settings.debridAccount.requestTimeout},
 			res => {
 				if (res.statusCode !== 200) dlErrHandle(req, 'Status code from ' + url + ' was ' + res.statusCode + ' (expecting status code 200)');
-				let dta = '';
 				res.on('error', err => dlErrHandle(req, err));
 				file.on('finish', () => {
+					logMsg('download of ' + url + ' complete', null, null, ws);
 					for (var i = 0; i < linksStatus.downloading.length; i++){ if (linksStatus.downloading[i] === url) linksStatus.downloading.splice(i, 1); }
 					linksStatus.completed.push(storeLocation);
 					return resolve(storeLocation);
