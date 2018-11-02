@@ -96,6 +96,7 @@ function downloadFile(url, storeLocation, ws) {
 			res => {
 				if (res.statusCode !== 200) dlErrHandle(req, 'Status code from ' + url + ' was ' + res.statusCode + ' (expecting status code 200)');
 				res.on('error', err => dlErrHandle(req, err));
+				file.on('error', err => dlErrHandle(req, err));  // *** TO DO: the stream is not closed on this error!
 				file.on('finish', () => {
 					logMsg('download of ' + url + ' complete', null, null, ws);
 					for (var i = 0; i < linksStatus.downloading.length; i++){ if (linksStatus.downloading[i] === url) linksStatus.downloading.splice(i, 1); }
