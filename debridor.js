@@ -8,17 +8,6 @@ const settings = require('./settings.json');
 
 
 /**
- * Log an Error Message; Optionally simplify the output
- * @param {Error | String} err - an error Object that was thrown
- * @returns {Error} the error as an Error object (even if a srring was supplied)
- */
-function logErr(err) {
-	if (typeof err === 'string') err = new Error(err);
-	console.warn('\n*** ' + new Date().toLocaleString() + ' ***  ' + err.message + ' --> ' + err.stack);
-	return err;
-}
-
-/**
  * Send a data on the given websocket
  * @param {Object} [ws] - the websocket object. If not specified, nothing is sent
  * @param {Object} dta - the data to send
@@ -26,8 +15,24 @@ function logErr(err) {
 function wsSendData(ws, dta) {
 	if (ws && ws.readyState === WebSocket.OPEN) ws.send(
 		JSON.stringify(dta),
-		err => err ? logErr(err) : true
+		err => err ? logMsg(err) : true
 	);
+}
+
+/**
+ * Log an Error Message; Optionally simplify the output
+ * @param {Error || String} err - an error Object that was thrown
+ * @param {String} [level="warn"] - the log level ("log", "info", "error", "debug", "warn", etc.)
+ * @param {boolean} [supressStack=false] - by default, the complete call stack will logged; if supressStack is set true only the message will be logged
+ * @param {Object} [ws] - the websocket object. If specified, the message will also be sent on the websocket; otherwise it will only be logged on the server
+ * @returns {Error} the error as an Error object (even if a srring was supplied)
+ */
+function logMsg(err, level, supressStack, ws) {
+	if (typeof err === 'string') err = new Error(err);
+	let msg = '*** ' + new Date().toLocaleString() + ' ***  ' + err.message + ((supressStack || !err.stack || (err.stack.trim() === '')) ? '' : ('\n' + err.stack)) + '\n';
+	console[level || 'warn'](msg);
+	if (ws) wsSendData(ws, msg);
+	return err;
 }
 
 /**
@@ -43,12 +48,12 @@ function unrestrictLink(url, linkPw) {
 			{ method: "POST", headers: { Authorization: "Bearer " + settings.debridAccount.apiToken }, timeout: settings.debridAccount.requestTimeout },
 			res => {
 				let dta = '';
-				res.on('error', err => reject(logErr(err)));
+				res.on('error', err => reject(logMsg(err)));
 				res.on('data', chunk => dta += chunk);
 				res.on('end', () => resolve(JSON.parse(dta).download));  // per the api, "link" is the origional linke, and "download" is the unrestrivted link 
 			}
 		);	
-		req.on('timeout', () => reject(logErr('Timeout getting unrestricted link from real debrid, url: ' + url)));
+		req.on('timeout', () => reject(logMsg('Timeout getting unrestricted link from real debrid, url: ' + url)));
 		req.end('link=' + url + (linkPw ? '&password=' + linkPw : ''));  // post data is "link=https://link.to/file.mkv.html&password=password"
 	});
 }
@@ -66,7 +71,7 @@ function downloadFile(url, storeLocation) {
 			req.abort();
 			file.close();
 			fs.unlink(storeLocation);
-			reject(logErr(err))
+			reject(logMsg(err))
 		}
 		let req = https.get(  // *** TO DO: handle http requests
 			url,
@@ -93,9 +98,9 @@ function downloadFile(url, storeLocation) {
  * @param {Object} [linksPasswd] - password for the links (if any)
  */
 function submitLinks(ws, links, storeageDir, linksPasswd) {	
-	fs.access(storeageDir, fs.constants.W_OK, err => {
+	fs.access(storeageDir, fs.constants.W_OK, err => {  // ensure directory is writable by this process
 		if (err) return err;
-		else {  // ensure directory is writable by this process
+		else {
 			links.forEach(async lnk => {
 				wsSendData(ws, 'unrestricting link: ' + lnk);
 				let unRestLnk = await unrestrictLink(lnk, linksPasswd);
@@ -118,7 +123,7 @@ server.filesCache = {
 };
 for (const fileName of Object.keys(server.filesCache)) {
 	fs.readFile(server.filesCache[fileName].path, (err, data) => {
-		if (err) return logErr(err);
+		if (err) return logMsg(err);
 		else server.filesCache[fileName].contents = data;
 	});	
 }
@@ -130,19 +135,19 @@ server.on('request', (request, response) => {
 			response.writeHead(200, server.filesCache[fileName].head);
 			response.end(server.filesCache[fileName].contents);		
 		} else {
-			logErr('Client requested a file not in server.filesCache: "' + request.url + '" (parsed to filename: ' + fileName + ')');
+			logMsg('Client requested a file not in server.filesCache: "' + request.url + '" (parsed to filename: ' + fileName + ')');
 			response.writeHead(404, {"Content-Type": "text/plain"});
 			response.end('404 Not Found\n');	
 		}
-	} catch(err) { logErr(err); }
+	} catch(err) { logMsg(err); }
 });
 server.listen(settings.server.port, err => {
-	if (err) return logErr(err);
+	if (err) return logMsg(err);
 	else {
 		const wss = new WebSocket.Server({server});
 		wss.on('connection', ws => {
 			function closeWs(ws, err) {
-				if (err && !err.message.includes('CLOSED')) logErr(err);
+				if (err && !err.message.includes('CLOSED')) logMsg(err);
 				clearInterval(ws.pingTimer);
 				return ws.terminate();
 			}
