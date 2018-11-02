@@ -5,6 +5,7 @@ const https = require('https');
 const WebSocket = require('ws');
 const path = require('path');
 const settings = require('./settings.json');
+const linksStatus = {downloading: [], unrestricting: [], errors: [], completed: []};
 
 
 /**
@@ -20,41 +21,52 @@ function wsSendData(ws, dta) {
 }
 
 /**
- * Log an Error Message; Optionally simplify the output
- * @param {Error || String} err - an error Object that was thrown
+ * Log an error or other message
+ * @param {Error || String} errOrMsg - an error Object that was thrown or a message to log
+ * @param {Object} [reject] - if specified, reject will be thrown on behalf of the Promise in the underlying function that called logMsg
+ * @param {String} [linksStatElmnt] - if specified, search linksStatus for linksStatElmnt and move it to linksStatus.errors
+ * @param {Object} [ws] - the websocket object. If specified, the message will also be sent on the websocket; otherwise it will only be logged on the server
  * @param {String} [level="warn"] - the log level ("log", "info", "error", "debug", "warn", etc.)
  * @param {boolean} [supressStack=false] - by default, the complete call stack will logged; if supressStack is set true only the message will be logged
- * @param {Object} [ws] - the websocket object. If specified, the message will also be sent on the websocket; otherwise it will only be logged on the server
  * @returns {Error} the error as an Error object (even if a srring was supplied)
  */
-function logMsg(err, level, supressStack, ws) {
-	if (typeof err === 'string') err = new Error(err);
-	let msg = '*** ' + new Date().toLocaleString() + ' ***  ' + err.message + ((supressStack || !err.stack || (err.stack.trim() === '')) ? '' : ('\n' + err.stack)) + '\n';
-	console[level || 'warn'](msg);
-	if (ws) wsSendData(ws, msg);
-	return err;
+function logMsg(errOrMsg, reject, linksStatElmnt, ws, level, supressStack) {
+	if (typeof errOrMsg === 'string') errOrMsg = new Error(errOrMsg);
+	console[level || 'warn']('*** ' + new Date().toLocaleString() + ' ***  ' + errOrMsg.message + '\n');
+	if (ws) wsSendData(ws, errOrMsg.message + '\n');  // for websocket, always send just the current message, and don't include the error stack, regardless of supressStack
+	if (!supressStack && errOrMsg.stack && (errOrMsg.stack.trim() !== '')) console[level || 'warn'](errOrMsg.stack + '\n');  // tack on the err.stack only if supressStack is false (the default) and an err.stack actually exists and isn't empty
+	if (linksStatElmnt) {
+			for (var i = 0; i < linksStatus.unrestricting.length; i++){ if (linksStatus.unrestricting[i] === linksStatElmnt) linksStatus.unrestricting.splice(i, 1); }  // delete all matching items from the list
+			for (var i = 0; i < linksStatus.downloading.length; i++){ if (linksStatus.downloading[i] === linksStatElmnt) linksStatus.downloading.splice(i, 1); }
+			linksStatus.errors.push({'item': linksStatElmnt, 'error': errOrMsg, date: new Date(), });
+			if (linksStatus.errors.length > settings.server.maxErrLogLength) linksStatus.errors.shift(); // remove top item, if the list is getting too long
+	}
+	if (reject) reject(errOrMsg);
+	return errOrMsg;
 }
 
 /**
  * Handle a link - unrestrict the link from real debrid
  * @param {String} url - the link to handle
  * @param {String} [linkPw] - the link password, if any
+ * @param {Object} [ws] - the websocket object. If specified, error messages will also be sent on the websocket; otherwise it will only be logged on the server
  * @returns {Promise} resolves into string: url of the unrestricted link
  */
-function unrestrictLink(url, linkPw) {
+function unrestrictLink(url, linkPw, ws) {
 	return new Promise((resolve, reject) => {
-		let req = https.request(  // *** TO DO: handle http requests
-			settings.debridAccount.apiBaseUrl + 'unrestrict/link',  // probably https://api.real-debrid.com/rest/1.0/unrestrict/link 
+		linksStatus.unrestricting.push(url);
+		let req = https.request(  // *** TO DO: handle plain http requests
+			settings.debridAccount.apiBaseUrl + 'unrestrict/link',  // per real debrid api - probably https://api.real-debrid.com/rest/1.0/unrestrict/link 
 			{ method: "POST", headers: { Authorization: "Bearer " + settings.debridAccount.apiToken }, timeout: settings.debridAccount.requestTimeout },
 			res => {
 				let dta = '';
-				res.on('error', err => reject(logMsg(err)));
+				res.on('error', err => logMsg(err, reject, url, ws));
 				res.on('data', chunk => dta += chunk);
-				res.on('end', () => resolve(JSON.parse(dta).download));  // per the api, "link" is the origional linke, and "download" is the unrestrivted link 
+				res.on('end', () => resolve(JSON.parse(dta).download));  // per the api, "link" is the original link, and "download" is the unrestricted link 
 			}
 		);	
-		req.on('timeout', () => reject(logMsg('Timeout getting unrestricted link from real debrid, url: ' + url)));
-		req.end('link=' + url + (linkPw ? '&password=' + linkPw : ''));  // post data is "link=https://link.to/file.mkv.html&password=password"
+		req.on('timeout', () => logMsg(`Timeout unrestricting ${url} from real debrid, url`, reject, url, ws));
+		req.end('link=' + url + (linkPw ? '&password=' + linkPw : ''));  // write and end post data like this: "link=https://link.to/file.mkv.html&password=password"
 	});
 }
 
@@ -62,25 +74,31 @@ function unrestrictLink(url, linkPw) {
  * Download a file from a given url and save to a given location
  * @param {String} url - the url of the file to download
  * @param {String} storeLocation - full path and filename at which to store the downloaded file
+ * @param {Object} [ws] - the websocket object. If specified, error messages will also be sent on the websocket; otherwise it will only be logged on the server
  * @returns {Promise} resolves to storeLocation - the location where the file was successfully saved
  */
-function downloadFile(url, storeLocation) {
+function downloadFile(url, storeLocation, ws) {
 	return new Promise((resolve, reject) => {
+		linksStatus.downloading.push(url);
 		let file = fs.createWriteStream(storeLocation);
 		function dlErrHandle(req, err) {
 			req.abort();
 			file.close();
 			fs.unlink(storeLocation);
-			reject(logMsg(err))
+			logMsg(err, reject, url, ws);
 		}
-		let req = https.get(  // *** TO DO: handle http requests
+		let req = https.get(  // *** TO DO: handle http requests?
 			url,
 			{timeout: settings.debridAccount.requestTimeout},
 			res => {
-				if (res.statusCode !== 200) dlErrHandle(req, 'Status code for file at ' + url + ' was ' + res.statusCode + ' (expecting status code 200)');
+				if (res.statusCode !== 200) dlErrHandle(req, 'Status code from ' + url + ' was ' + res.statusCode + ' (expecting status code 200)');
 				let dta = '';
 				res.on('error', err => dlErrHandle(req, err));
-				file.on('finish', () => resolve(storeLocation));
+				file.on('finish', () => {
+					for (var i = 0; i < linksStatus.downloading.length; i++){ if (linksStatus.downloading[i] === url) linksStatus.downloading.splice(i, 1); }
+					linksStatus.completed.push(storeLocation);
+					return resolve(storeLocation);
+				});
 				res.pipe(file);
 			}
 		);
@@ -92,7 +110,7 @@ function downloadFile(url, storeLocation) {
 
 /**
  * Take a list of links and return unrestricted Links from real debrid
- * @param {Object} ws - the websocket on which to send updated endpoint data
+ * @param {Object} ws - the websocket on which to send updated data
  * @param {Array} links - array of strings continaing the urls to unrestrict and then download
  * @param {Array} storeageDir - directory at which to store the downloaded files
  * @param {Object} [linksPasswd] - password for the links (if any)
@@ -103,14 +121,15 @@ function submitLinks(ws, links, storeageDir, linksPasswd) {
 		else {
 			links.forEach(async lnk => {
 				wsSendData(ws, 'unrestricting link: ' + lnk);
-				let unRestLnk = await unrestrictLink(lnk, linksPasswd);
+				let unRestLnk = await unrestrictLink(lnk, linksPasswd, ws);
 				wsSendData(ws, 'downloading from unrestricted link: ' + unRestLnk);
-				let successDir = await downloadFile(unRestLnk, storeageDir + path.basename(unRestLnk));
+				let successDir = await downloadFile(unRestLnk, storeageDir + path.basename(unRestLnk), ws);
 				wsSendData(ws, 'file saved to ' + successDir);
 			});
 		}
 	});	
 }
+
 
 /**
  * Entry Point
@@ -152,7 +171,10 @@ server.listen(settings.server.port, err => {
 				return ws.terminate();
 			}
 			ws.isAlive = true;
-			ws.on('message', msg => submitLinks(ws, JSON.parse(msg).links, JSON.parse(msg).saveLoc, JSON.parse(msg).linksPw));
+			ws.on('message', msg => {
+				if (msg === 'getStatus') wsSendData(ws, JSON.stringify(linksStatus));
+				else submitLinks(ws, JSON.parse(msg).links, JSON.parse(msg).saveLoc, JSON.parse(msg).linksPw);
+			});
 			ws.on('pong', () => ws.isAlive = true);
 			ws.pingTimer = setInterval(() => {
 				if (ws.isAlive === false) return closeWs(ws);
