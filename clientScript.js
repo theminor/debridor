@@ -8,6 +8,8 @@ function submitBtn() {
 	));
 }
 
+function statusBtn() { skt.send('getStatus'); }
+
 const skt = new WebSocket(window.location.href.replace('http://', 'ws://').replace('https://', 'wss://'));
 
 skt.onmessage = function(event) {
