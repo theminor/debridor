@@ -62,7 +62,10 @@ function unrestrictLink(url, linkPw, ws) {
 				let dta = '';
 				res.on('error', err => logMsg(err, reject, url, ws));
 				res.on('data', chunk => dta += chunk);
-				res.on('end', () => resolve(JSON.parse(dta).download));  // per the api, "link" is the original link, and "download" is the unrestricted link 
+				res.on('end', () => {
+					for (var i = 0; i < linksStatus.unrestricting.length; i++){ if (linksStatus.unrestricting[i] === url) linksStatus.unrestricting.splice(i, 1); }
+					resolve(JSON.parse(dta).download); // per the api, "link" is the original link, and "download" is the unrestricted link
+				});
 			}
 		);	
 		req.on('timeout', () => logMsg(`Timeout unrestricting ${url} from real debrid, url`, reject, url, ws));
