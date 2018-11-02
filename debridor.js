@@ -49,7 +49,7 @@ function unrestrictLink(url, linkPw) {
 			}
 		);	
 		req.on('timeout', () => reject(logErr('Timeout getting unrestricted link from real debrid, url: ' + url)));
-		req.end('link=' + url + (linkPw ? '&password=' + linkPw : ''));
+		req.end('link=' + url + (linkPw ? '&password=' + linkPw : ''));  // post data is "link=https://link.to/file.mkv.html&password=password"
 	});
 }
 
@@ -118,7 +118,7 @@ server.filesCache = {
 };
 for (const fileName of Object.keys(server.filesCache)) {
 	fs.readFile(server.filesCache[fileName].path, (err, data) => {
-		if (err) { return logErr(err); throw(err); }
+		if (err) return logErr(err);
 		else server.filesCache[fileName].contents = data;
 	});	
 }
@@ -130,19 +130,19 @@ server.on('request', (request, response) => {
 			response.writeHead(200, server.filesCache[fileName].head);
 			response.end(server.filesCache[fileName].contents);		
 		} else {
-			logErr(new Error('Client requested a file not in server.filesCache: "' + request.url + '" (parsed to filename: ' + fileName + ')'));
+			logErr('Client requested a file not in server.filesCache: "' + request.url + '" (parsed to filename: ' + fileName + ')');
 			response.writeHead(404, {"Content-Type": "text/plain"});
 			response.end('404 Not Found\n');	
 		}
 	} catch(err) { logErr(err); }
 });
 server.listen(settings.server.port, err => {
-	if (err) { return logErr(err); }
+	if (err) return logErr(err);
 	else {
 		const wss = new WebSocket.Server({server});
 		wss.on('connection', ws => {
 			function closeWs(ws, err) {
-				if (err) logErr(err);
+				if (err && !err.message.includes('CLOSED')) logErr(err);
 				clearInterval(ws.pingTimer);
 				return ws.terminate();
 			}
