@@ -7,6 +7,15 @@ const path = require('path');
 const settings = require('./settings.json');
 const linksStatus = {downloading: [], unrestricting: [], errors: [], completed: []};
 
+/**
+ * Utility function to iterate through an array for all elments matching the given object and remove those that match
+ * @param {Array} arry - teh array on which to operate
+ * @param {Object} elmnt - the element to match and remove from the array
+ * @returns {Array} the array with matching elements removed
+ */
+function removeArrayElement(arry, elmnt) {
+	for (var i = 0; i < arry.length; i++){ if (arry[i] === elmnt) arry.splice(i, 1); }
+}
 
 /**
  * Send a data on the given websocket
@@ -36,8 +45,8 @@ function logMsg(errOrMsg, reject, linksStatElmnt, ws, level, supressStack) {
 	if (ws) wsSendData(ws, errOrMsg.message + '\n');  // for websocket, always send just the current message, and don't include the error stack, regardless of supressStack
 	if (!supressStack && errOrMsg.stack && (errOrMsg.stack.trim() !== '')) console[level || 'warn'](errOrMsg.stack + '\n');  // tack on the err.stack only if supressStack is false (the default) and an err.stack actually exists and isn't empty
 	if (linksStatElmnt) {
-			for (var i = 0; i < linksStatus.unrestricting.length; i++){ if (linksStatus.unrestricting[i] === linksStatElmnt) linksStatus.unrestricting.splice(i, 1); }  // delete all matching items from the list
-			for (var i = 0; i < linksStatus.downloading.length; i++){ if (linksStatus.downloading[i] === linksStatElmnt) linksStatus.downloading.splice(i, 1); }
+			removeArrayElement(linksStatus.unrestricting, linksStatElmnt);
+			removeArrayElement(linksStatus.downloading, linksStatElmnt);
 			linksStatus.errors.push({'item': linksStatElmnt, 'error': errOrMsg, date: new Date(), });
 			if (linksStatus.errors.length > settings.server.maxErrLogLength) linksStatus.errors.shift(); // remove top item, if the list is getting too long
 	}
@@ -55,7 +64,7 @@ function logMsg(errOrMsg, reject, linksStatElmnt, ws, level, supressStack) {
 function unrestrictLink(url, linkPw, ws) {
 	return new Promise((resolve, reject) => {
 		linksStatus.unrestricting.push(url);
-		let req = https.request(  // *** TO DO: handle plain http requests
+		let req = https.request(  // *** TO DO: handle plain http requests?
 			settings.debridAccount.apiBaseUrl + 'unrestrict/link',  // per real debrid api - probably https://api.real-debrid.com/rest/1.0/unrestrict/link 
 			{ method: "POST", headers: { Authorization: "Bearer " + settings.debridAccount.apiToken }, timeout: settings.debridAccount.requestTimeout },
 			res => {
@@ -63,7 +72,7 @@ function unrestrictLink(url, linkPw, ws) {
 				res.on('error', err => logMsg(err, reject, url, ws));
 				res.on('data', chunk => dta += chunk);
 				res.on('end', () => {
-					for (var i = 0; i < linksStatus.unrestricting.length; i++){ if (linksStatus.unrestricting[i] === url) linksStatus.unrestricting.splice(i, 1); }
+					removeArrayElement(linksStatus.unrestricting, url);
 					resolve(JSON.parse(dta).download); // per the api, "link" is the original link, and "download" is the unrestricted link
 				});
 			}
@@ -82,15 +91,16 @@ function unrestrictLink(url, linkPw, ws) {
  */
 function downloadFile(url, storeLocation, ws) {
 	return new Promise((resolve, reject) => {
-		linksStatus.downloading.push(url);
 		let file = fs.createWriteStream(storeLocation);
+		let lsElmntIndex = linksStatus.downloading.push({"url": url, "file": file});
+		let lsElement = linksStatus.downloading[lsElmntIndex];
 		function dlErrHandle(req, err) {
 			req.abort();
 			file.close();
 			fs.unlink(storeLocation);
-			logMsg(err, reject, url, ws);
+			logMsg(err, reject, lsElement, ws);
 		}
-		let req = https.get(  // *** TO DO: handle http requests?
+		let req = https.get(  // *** TO DO: handle plain http requests?
 			url,
 			{timeout: settings.debridAccount.requestTimeout},
 			res => {
@@ -99,7 +109,7 @@ function downloadFile(url, storeLocation, ws) {
 				file.on('error', err => dlErrHandle(req, err));  // *** TO DO: the stream is not closed on this error!
 				file.on('finish', () => {
 					logMsg('download of ' + url + ' complete', null, null, ws);
-					for (var i = 0; i < linksStatus.downloading.length; i++){ if (linksStatus.downloading[i] === url) linksStatus.downloading.splice(i, 1); }
+					removeArrayElement(linksStatus.downloading, lsElement);
 					linksStatus.completed.push(storeLocation);
 					return resolve(storeLocation);
 				});
