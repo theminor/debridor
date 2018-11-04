@@ -92,6 +92,7 @@ function unrestrictLink(url, linkPw, ws) {
 function downloadFile(url, storeLocation, ws) {
 	return new Promise((resolve, reject) => {
 		let file = fs.createWriteStream(storeLocation);
+		file.on('error', err => dlErrHandle(req, err));
 		let lsElmntIndex = linksStatus.downloading.push({"url": url, "file": file, "fileSize": null});
 		let lsElement = linksStatus.downloading[lsElmntIndex];
 		function dlErrHandle(req, err) {
@@ -102,24 +103,23 @@ function downloadFile(url, storeLocation, ws) {
 		}
 		let req = https.get(  // *** TO DO: handle plain http requests?
 			url,
-			{timeout: settings.debridAccount.requestTimeout},
-			res => {
-				if (lsElement && res.headers) lsElement.fileSize = parseInt(res.headers['content-length'], 10);
-				if (res.statusCode !== 200) dlErrHandle(req, 'Status code from ' + url + ' was ' + res.statusCode + ' (expecting status code 200)');
-				res.on('error', err => dlErrHandle(req, err));
-				file.on('error', err => dlErrHandle(req, err));  // *** TO DO: the stream is not closed on this error!
-				file.on('finish', () => {
-					wsSendData(ws, 'download of ' + url + ' complete');
-					removeArrayElement(linksStatus.downloading, lsElement);
-					linksStatus.completed.push(storeLocation);
-					return resolve(storeLocation);
-				});
-				res.pipe(file);
-			}
+			{timeout: settings.debridAccount.requestTimeout}
 		);
 		req.on('error', err => dlErrHandle(req, err));
 		req.on('timeout', () => dlErrHandle(req, 'Timeout requesting file at ' + url));		
-		file.on('error', err => dlErrHandle(req, err));
+		req.on('response', res => {
+			if (res.headers) lsElement.fileSize = parseInt(res.headers['content-length'], 10);
+			if (res.statusCode !== 200) dlErrHandle(req, 'Status code from ' + url + ' was ' + res.statusCode + ' (expecting status code 200)');
+			res.on('error', err => dlErrHandle(req, err));
+			file.on('error', err => dlErrHandle(req, err));  // *** TO DO: the stream is not closed on this error!
+			file.on('finish', () => {
+				wsSendData(ws, 'download of ' + url + ' complete');
+				removeArrayElement(linksStatus.downloading, lsElement);
+				linksStatus.completed.push(storeLocation);
+				return resolve(storeLocation);
+			});
+			res.pipe(file);
+		});			
 	});
 }
 
