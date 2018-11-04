@@ -94,15 +94,11 @@ function downloadFile(url, storeLocation, ws) {
 		let file = fs.createWriteStream(storeLocation);
 		file.on('error', err => dlErrHandle(req, err));  // *** TO DO: the stream is possibly not closed on this error
 		let lsElmntIndex = linksStatus.downloading.push({"url": url, "file": file, "fileSize": null});
-		let lsElement = linksStatus.downloading[lsElmntIndex];
-			console.log(lsElement);
-			
+		let lsElement = linksStatus.downloading[lsElmntIndex - 1];
 		function dlErrHandle(req, err) {
 			req.abort();
 			file.close();
 			fs.unlink(storeLocation);
-				console.log(lsElement);
-			
 			logMsg(err, reject, lsElement, ws);
 		}
 		let req = https.get(  // *** TO DO: handle plain http requests?
@@ -112,16 +108,12 @@ function downloadFile(url, storeLocation, ws) {
 		req.on('error', err => dlErrHandle(req, err));
 		req.on('timeout', () => dlErrHandle(req, 'Timeout requesting file at ' + url));		
 		req.on('response', res => {
-				console.log(lsElement);
-			
 			if (res.headers) lsElement.fileSize = parseInt(res.headers['content-length'], 10);
 			if (res.statusCode !== 200) dlErrHandle(req, 'Status code from ' + url + ' was ' + res.statusCode + ' (expecting status code 200)');
 			res.on('error', err => dlErrHandle(req, err));
 			res.pipe(file);
 		});
 		file.on('finish', () => {
-					console.log(lsElement);
-
 			wsSendData(ws, 'download of ' + url + ' complete');
 			removeArrayElement(linksStatus.downloading, lsElement);
 			linksStatus.completed.push(storeLocation);
