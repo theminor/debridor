@@ -1,7 +1,7 @@
 function submitBtn() {
 	skt.send(JSON.stringify(
 		{
-			links: document.getElementById('linksBox').value.split(/\n/),
+			links: document.getElementById('linksBox').value.trim().split(/\n/),
 			linksPw: document.getElementById('linkPwInput').value,
 			saveLoc: document.getElementById('saveLocationSelect').value
 		}
