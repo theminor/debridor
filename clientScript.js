@@ -26,7 +26,7 @@ skt.onmessage = function(event) {
 			newBar.className = 'progress-bar';
 			newBar.setAttribute('role', 'progressbar');
 			newBar.setAttribute('width', (current / max * 100).toString() + '%');
-			newBar.setAttribute('aria-valuenow', current / max * 100);
+			newBar.setAttribute('aria-valuenow', current);
 			newBar.setAttribute('aria-valuemin', 0);
 			newBar.setAttribute('aria-valuemax', max);
 			newBar.innerText = text || ((current / max * 100).toFixed(1).toString() + '%');
