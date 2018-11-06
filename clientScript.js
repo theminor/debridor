@@ -13,8 +13,11 @@ function statusBtn() { skt.send('getStatus'); }
 const skt = new WebSocket(window.location.href.replace('http://', 'ws://').replace('https://', 'wss://'));
 
 skt.onmessage = function(event) {
+	console.log('debug0:');
+	console.log(event);
 	let msg = JSON.parse(event.data);
-	console.log('debug1:', typeof msg, msg);
+	console.log('debug1:');
+	console.log(msg);
 	let statusElement = document.getElementById('statusText');
 	statusElement.innerHTML = statusElement.innerHTML + '\n' + msg;
 
