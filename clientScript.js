@@ -36,5 +36,5 @@ skt.onmessage = function(event) {
 	if (msg.downloading) msg.downloading.forEach(unr => {
 		console.log('debug4:', unr);
 		addBar(unr.file.bytesWritten, unr.fileSize, (unr.file.path + ': ' + (unr.file.bytesWritten / unr.fileSize * 100) + '% (' + unr.file.bytesWritten + ' of ' + unr.fileSize + ' bytes)'));
-	}
+	});
 };
