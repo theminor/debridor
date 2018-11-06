@@ -11,23 +11,30 @@
 </head>
 <body>
 <h1>Download Tool</h1>
-<label for="linksBox">Paste links to convert and download:</label>
-<textarea id="linksBox" rows="20" cols="100" wrap="off"></textarea>
-<label for="linkPwInput">Links Password, if any:</label>
-<input id="linkPwInput" type="text" />
-<label for="saveLocationSelect">Choose Location to save downloaded files:</label>
-<select id="saveLocationSelect">
-	<option value="movies">Movies</option>
-	<option value="tv">TV</option>
-	<option value="music">Music</option>
-	<option value="audiobooks">Audiobooks</option>
-	<option value="ebooks">Ebooks</option>
-	<option value="software">Software</option>
-	<option value="downloads">Downloads</option>
-</select>
+<div>
+	<label for="linksBox">Paste links to convert and download:</label>
+	<textarea id="linksBox" rows="20" cols="100" wrap="off"></textarea>
+</div><div>
+	<label for="saveLocationSelect">Choose Location to save downloaded files:</label>
+	<select id="saveLocationSelect">
+		<option value="/path/to/movies/">Movies</option>
+		<option value="/path/to/tv/">TV</option>
+		<option value="/path/to/music/">Music</option>
+		<option value="/path/to/audiobooks/">Audiobooks</option>
+		<option value="/path/to/ebooks/">Ebooks</option>
+		<option value="/path/to/software/">Software</option>
+		<option value="/path/to/downloads/">Downloads</option>
+	</select>
+	<label for="linkPwInput">Links Password, if any:</label>
+	<input id="linkPwInput" type="text" />
+</div><div>
 <button onclick="submitBtn()">Submit</button>
 <button onclick="statusBtn()">Status</button>
-<script src="./clientScript.js"></script>
+</div><div class="progress" id="progBars">
+</div><div>
+<label for="statusText">Output Info:</label>
 <pre><code id="statusText"></code></pre>
+</div>
+<script src="./clientScript.js"></script>
 </body>
 </html>
