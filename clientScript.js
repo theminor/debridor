@@ -18,7 +18,7 @@ skt.onmessage = function(event) {
 	let msg = JSON.parse(event.data);
 	console.log('debug1:');
 	console.log(msg);
-	if (typeof msg === 'string') msg = JSON.parse(msg);	
+	if ((typeof msg === 'string') && (msg.startsWith('{'))) msg = JSON.parse(msg);	
 	console.log('debug1.5:');
 	console.log(msg);
 	let statusElement = document.getElementById('statusText');
