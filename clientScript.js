@@ -14,7 +14,7 @@ const skt = new WebSocket(window.location.href.replace('http://', 'ws://').repla
 
 skt.onmessage = function(event) {
 	let msg = JSON.parse(event.data);
-	console.log('debug1:', msg);
+	console.log('debug1:', typeof msg, msg);
 	let statusElement = document.getElementById('statusText');
 	statusElement.innerHTML = statusElement.innerHTML + '\n' + msg;
 
