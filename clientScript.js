@@ -14,12 +14,14 @@ const skt = new WebSocket(window.location.href.replace('http://', 'ws://').repla
 
 skt.onmessage = function(event) {
 	let msg = JSON.parse(event.data);
+	console.log('debug1:', msg);
 	let statusElement = document.getElementById('statusText');
 	statusElement.innerHTML = statusElement.innerHTML + '\n' + msg;
 
 	let progBarsDiv = document.getElementById('progBars');
 	while (progBarsDiv.hasChildNodes()) { progBarsDiv.removeChild(progBarsDiv.lastChild); }  // remove all bars and re-build each, below
 	function addBar(current, max, text) {
+		console.log('debug2: ', current, max, text);
 		let newBar = progBarsDiv.appendChild(document.createElement('div'));
 		newBar.className = 'progress-bar';
 		newBar.setAttribute('role', 'progressbar');
