@@ -13,21 +13,14 @@ function statusBtn() { skt.send('getStatus'); }
 const skt = new WebSocket(window.location.href.replace('http://', 'ws://').replace('https://', 'wss://'));
 
 skt.onmessage = function(event) {
-	console.log('debug0:');
-	console.log(event);
 	let msg = JSON.parse(event.data);
-	console.log('debug1:');
-	console.log(msg);
-	if ((typeof msg === 'string') && (msg.startsWith('{'))) msg = JSON.parse(msg);	
-	console.log('debug1.5:');
-	console.log(msg);
+	if ((typeof msg === 'string') && (msg.startsWith('{'))) msg = JSON.parse(msg);	// needed for bug re "over-stringified" json
 	let statusElement = document.getElementById('statusText');
 	statusElement.innerHTML = statusElement.innerHTML + '\n' + msg;
 
 	let progBarsDiv = document.getElementById('progBars');
 	while (progBarsDiv.hasChildNodes()) { progBarsDiv.removeChild(progBarsDiv.lastChild); }  // remove all bars and re-build each, below
 	function addBar(current, max, text) {
-		console.log('debug2: ', current, max, text);
 		let newBar = progBarsDiv.appendChild(document.createElement('div'));
 		newBar.className = 'progress-bar';
 		newBar.setAttribute('role', 'progressbar');
@@ -38,9 +31,5 @@ skt.onmessage = function(event) {
 		newBar.innerText = text || ((current / max * 100).toString() + '%');
 	}
 	if (msg.unrestricting) msg.unrestricting.forEach(unr => addBar(100, 100, unr));
-	console.log('debug3:', typeof msg, msg);
-	if (msg.downloading) msg.downloading.forEach(unr => {
-		console.log('debug4:', unr);
-		addBar(unr.file.bytesWritten, unr.fileSize, (unr.file.path + ': ' + (unr.file.bytesWritten / unr.fileSize * 100) + '% (' + unr.file.bytesWritten + ' of ' + unr.fileSize + ' bytes)'));
-	});
+	if (msg.downloading) msg.downloading.forEach(unr => addBar(unr.file.bytesWritten, unr.fileSize, (unr.file.path + ': ' + (unr.file.bytesWritten / unr.fileSize * 100) + '% (' + unr.file.bytesWritten + ' of ' + unr.fileSize + ' bytes)')));
 };
