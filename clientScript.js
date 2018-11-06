@@ -27,7 +27,7 @@ skt.onmessage = function(event) {
 		newBar.setAttribute('aria-valuemax', max);
 		newBar.innerText = text || ((current / max * 100).toString() + '%');
 	}
-	msg.unrestricting.forEach(unr => addBar(100, 100, unr));
-	msg.downloading.forEach(unr => addBar(unr.file.bytesWritten, unr.fileSize, (unr.file.path + ': ' + (unr.file.bytesWritten / unr.fileSize * 100) + '% (' + unr.file.bytesWritten + ' of ' + unr.fileSize + ' bytes)')));
+	if (msg.unrestricting) msg.unrestricting.forEach(unr => addBar(100, 100, unr));
+	if (msg.downloading) msg.downloading.forEach(unr => addBar(unr.file.bytesWritten, unr.fileSize, (unr.file.path + ': ' + (unr.file.bytesWritten / unr.fileSize * 100) + '% (' + unr.file.bytesWritten + ' of ' + unr.fileSize + ' bytes)')));
 	statusElement.innerHTML = statusElement.innerHTML + '\n' + msg;
 };
