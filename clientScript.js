@@ -15,6 +15,8 @@ const skt = new WebSocket(window.location.href.replace('http://', 'ws://').repla
 skt.onmessage = function(event) {
 	let msg = JSON.parse(event.data);
 	let statusElement = document.getElementById('statusText');
+	statusElement.innerHTML = statusElement.innerHTML + '\n' + msg;
+
 	let progBarsDiv = document.getElementById('progBars');
 	while (progBarsDiv.hasChildNodes()) { progBarsDiv.removeChild(progBarsDiv.lastChild); }  // remove all bars and re-build each, below
 	function addBar(current, max, text) {
@@ -29,5 +31,4 @@ skt.onmessage = function(event) {
 	}
 	if (msg.unrestricting) msg.unrestricting.forEach(unr => addBar(100, 100, unr));
 	if (msg.downloading) msg.downloading.forEach(unr => addBar(unr.file.bytesWritten, unr.fileSize, (unr.file.path + ': ' + (unr.file.bytesWritten / unr.fileSize * 100) + '% (' + unr.file.bytesWritten + ' of ' + unr.fileSize + ' bytes)')));
-	statusElement.innerHTML = statusElement.innerHTML + '\n' + msg;
 };
