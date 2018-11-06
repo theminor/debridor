@@ -16,7 +16,7 @@ skt.onmessage = function(event) {
 	let msg = JSON.parse(event.data);
 	if (typeof msg === 'string') {
 		if (msg.startsWith('{')) msg = JSON.parse(msg);  // needed for bug re "over-stringified" json
-		else document.getElementById('statusText').innerHTML = statusElement.innerHTML + '\n' + msg;
+		else document.getElementById('statusText').innerHTML += '\n' + msg;
 	}
 	if (typeof msg === 'object') {
 		let progBarsDiv = document.getElementById('progBars');
