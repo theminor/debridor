@@ -14,10 +14,7 @@ const skt = new WebSocket(window.location.href.replace('http://', 'ws://').repla
 
 skt.onmessage = function(event) {
 	let msg = JSON.parse(event.data);
-	if (typeof msg === 'string') {
-		if (msg.startsWith('{')) msg = JSON.parse(msg);  // needed for bug re "over-stringified" json
-		else document.getElementById('statusText').innerHTML += '\n' + msg;
-	}
+	if (typeof msg === 'string' && msg.startsWith('{')) msg = JSON.parse(msg);  // needed for bug re "over-stringified" json
 	if (typeof msg === 'object') {
 		let progBarsDiv = document.getElementById('progBars');
 		while (progBarsDiv.hasChildNodes()) { progBarsDiv.removeChild(progBarsDiv.lastChild); }  // remove all bars and re-build each, below
@@ -33,5 +30,5 @@ skt.onmessage = function(event) {
 		}
 		if (msg.unrestricting) msg.unrestricting.forEach(unr => addBar(100, 100, unr));
 		if (msg.downloading) msg.downloading.forEach(unr => addBar(unr.file.bytesWritten, unr.fileSize, (unr.file.path + ': ' + (unr.file.bytesWritten / unr.fileSize * 100).toFixed(1) + '% (' + unr.file.bytesWritten + ' of ' + unr.fileSize + ' bytes)')));
-	}
+	} else console.log(msg);
 }
