@@ -13,10 +13,10 @@
 <h1>Download Tool</h1>
 <div>
 	<label for="linksBox">Paste links to convert and download:</label>
-	<textarea id="linksBox" rows="20" cols="100" wrap="off"></textarea>
+	<textarea id="linksBox" rows="20" class="form-control" wrap="off"></textarea>
 </div><div>
 	<label for="saveLocationSelect">Choose Location to save downloaded files:</label>
-	<select id="saveLocationSelect">
+	<select class="form-control" id="saveLocationSelect">
 		<option value="/path/to/downloads/">Downloads</option>
 		<option value="/path/to/movies/">Movies</option>
 		<option value="/path/to/tv/">TV</option>
@@ -25,12 +25,14 @@
 		<option value="/path/to/ebooks/">Ebooks</option>
 		<option value="/path/to/software/">Software</option>
 	</select>
-	<label for="linkPwInput">Links Password, if any:</label>
-	<input id="linkPwInput" type="text" />
 </div><div>
-<button onclick="submitBtn()">Submit</button>
-<button onclick="statusBtn()">Status</button>
-</div><div class="progress" id="progBars">
+	<label for="linkPwInput">Links Password, if any:</label>
+	<input class="form-control" id="linkPwInput" type="text" />
+</div><div>
+	<button class="btn btn-primary" onclick="submitBtn()">Submit</button>
+	<button class="btn btn-info" onclick="statusBtn()">Status</button>
+</div><div><label for="progBars">Progress:</label></div>
+<div class="progress" id="progBars">
 </div><div>
 <label for="statusText">Output Info:</label>
 <pre><code id="statusText"></code></pre>
