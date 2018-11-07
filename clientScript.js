@@ -1,3 +1,5 @@
+const skt = new WebSocket(window.location.href.replace('http://', 'ws://').replace('https://', 'wss://'));
+
 function submitBtn() {
 	skt.send(JSON.stringify(
 		{
@@ -8,9 +10,11 @@ function submitBtn() {
 	));
 }
 
-function statusBtn() { skt.send('getStatus'); }
+function statusBtn() {
+	skt.send('getStatus');
+}
 
-const skt = new WebSocket(window.location.href.replace('http://', 'ws://').replace('https://', 'wss://'));
+setInterval(statusBtn, 7500);  // update status every 7.5 seconds
 
 skt.onmessage = function(event) {
 	let msg = JSON.parse(event.data);
