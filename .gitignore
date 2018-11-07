@@ -60,6 +60,9 @@ typings/
 # next.js build output
 .next
 
+# .htpasswd for authentication, etc.
+.htpasswd
+
 # settings file, which could have passwords/api keys
 settings.json
 
