@@ -26,7 +26,7 @@ skt.onmessage = function(event) {
 			let newBar = progBarsDiv.appendChild(document.createElement('div'));
 			newBar.className = 'progress-bar ' + style;
 			newBar.setAttribute('role', 'progressbar');
-			newBar.setAttribute('width', (current / max * 100).toString() + '%');
+			newBar.setAttribute('style', 'width: ' + (current / max * 100).toString() + '%');
 			newBar.setAttribute('aria-valuenow', current);
 			newBar.setAttribute('aria-valuemin', 0);
 			newBar.setAttribute('aria-valuemax', max);
