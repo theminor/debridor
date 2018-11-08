@@ -11,7 +11,7 @@ function submitBtn() {
 }
 
 function getStatus() {
-	skt.send(JSON.stringify({ getStatus: true} ));
+	skt.send("{}");
 }
 
 skt.onmessage = function(event) {
@@ -40,5 +40,4 @@ skt.onmessage = function(event) {
 }
 
 setInterval(getStatus, 7500);  // update status every 7.5 seconds
-getStatus(); // and update on page load
-
+skt.onopen = getStatus;        // and update once the websocket is open and ready
