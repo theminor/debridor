@@ -33,12 +33,7 @@ skt.onmessage = function(event) {
 			else newBar.innerText = path + ': ' + Math.round(current/max * 100) + '% (' + Math.round(current/1000000) + ' of ' + Math.round(max/1000000) + ' MB)';
 		}
 		if (msg.unrestricting) msg.unrestricting.forEach(unr => addBar(100, 100, unr, 'bg-warning'));
-		if (msg.downloading) msg.downloading.forEach(unr => addBar(
-			unr.file.bytesWritten,
-			unr.fileSize,
-			(unr.file.path + ': ' + (unr.file.bytesWritten / unr.fileSize * 100).toFixed(1) + '% (' + (unr.file.bytesWritten/1000000).toFixed(1) + ' of ' + (unr.fileSize/1000000).toFixed(1) + ' MB)'),
-			'bg-info'
-		));
+		if (msg.downloading) msg.downloading.forEach(unr => addBar(unr.file.bytesWritten, unr.fileSize, unr.file.path, 'bg-info'));
 		if (msg.completed) msg.completed.forEach(unr => addBar(100, 100, unr, 'bg-success'));
 		if (msg.errors) msg.errors.forEach(unr => addBar(100, 100, unr, 'bg-danger'));
 	} else console.log(msg);
