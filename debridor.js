@@ -138,6 +138,7 @@ function downloadFile(url, storeLocation, ws) {
  * @param {String} urlOrPath - the path or url describing the download or listed item for removal
  */
 function cancelJob(ws, urlOrPath) {
+	// *** TO DO - if job is downloading, it goes to completed files; if anythign else it isn't removed!
 	for (var i = 0; i < linksStatus.downloading.length; i++){   // cancel pending downloads that match and close the file that is being written, if any
 		if (urlOrPath === linksStatus.downloading[i].file.path) {
 			if (linksStatus.downloading[i].request) linksStatus.downloading[i].request.abort();
@@ -226,3 +227,5 @@ server.listen(settings.server.port, err => {
 		console.log('Server ' + settings.server.name + ' (http' + (settings.server.https ? 's://' : '://') + settings.server.address + ') is listening on port ' + settings.server.port);
 	}
 });
+
+// *** TO DO: pull local directories to save locations on client?
