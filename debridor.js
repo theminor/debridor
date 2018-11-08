@@ -186,8 +186,9 @@ server.listen(settings.server.port, err => {
 			}
 			ws.isAlive = true;
 			ws.on('message', msg => {
-				if (msg === 'getStatus') wsSendData(ws, JSON.stringify(linksStatus));
-				else submitLinks(ws, JSON.parse(msg).links, JSON.parse(msg).saveLoc, JSON.parse(msg).linksPw);
+				msg = JSON.parse(msg);
+				if (msg.getStatus) wsSendData(ws, JSON.stringify(linksStatus));
+				else submitLinks(ws, msg.links, msg.saveLoc, msg.linksPw);
 			});
 			ws.on('pong', () => ws.isAlive = true);
 			ws.pingTimer = setInterval(() => {
