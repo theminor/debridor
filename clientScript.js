@@ -10,7 +10,7 @@ function submitBtn() {
 	));
 }
 
-function statusBtn() {
+function getStatus() {
 	skt.send('getStatus');
 }
 
@@ -37,6 +37,6 @@ skt.onmessage = function(event) {
 	} else console.log(msg);
 }
 
-setInterval(statusBtn, 7500);  // update status every 7.5 seconds
-statusBtn(); // and update on page load
+setInterval(getStatus, 7500);  // update status every 7.5 seconds
+getStatus(); // and update on page load
 
