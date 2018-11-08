@@ -143,7 +143,7 @@ function cancelJob(ws, urlOrPath) {
 			if (linksStatus.downloading[i].request) linksStatus.downloading[i].request.abort();
 			if (linksStatus.downloading[i].file) linksStatus.downloading[i].file.close();
 		}
-		logMsg('download cancelled', null, urlOrPath, ws);  // if error type was clicked, remove it and be done. Otherwise, add to error list
+		logMsg('download cancelled', null, urlOrPath, ws, null, true);  // if error type was clicked, remove it and be done. Otherwise, add to error list
 	}
 }
 
