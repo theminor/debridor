@@ -14,8 +14,6 @@ function statusBtn() {
 	skt.send('getStatus');
 }
 
-setInterval(statusBtn, 7500);  // update status every 7.5 seconds
-
 skt.onmessage = function(event) {
 	let msg = JSON.parse(event.data);
 	if (typeof msg === 'string' && msg.startsWith('{')) msg = JSON.parse(msg);  // needed for bug re "over-stringified" json
@@ -38,3 +36,7 @@ skt.onmessage = function(event) {
 		if (msg.errors) msg.errors.forEach(unr => addBar(100, 100, unr, 'bg-danger'));
 	} else console.log(msg);
 }
+
+setInterval(statusBtn, 7500);  // update status every 7.5 seconds
+statusBtn(); // and update on page load
+
