@@ -11,7 +11,7 @@ function submitBtn() {
 }
 
 function getStatus() {
-	skt.send(JSON.stringify({ getStatus: true} );
+	skt.send(JSON.stringify({ getStatus: true} ));
 }
 
 skt.onmessage = function(event) {
