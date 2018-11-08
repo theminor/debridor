@@ -11,10 +11,17 @@ const linksStatus = {downloading: [], unrestricting: [], errors: [], completed: 
  * Utility function to iterate through an array for all elments matching the given object and remove those that match
  * @param {Array} arry - teh array on which to operate
  * @param {Object} elmnt - the element to match and remove from the array
- * @returns {Array} the array with matching elements removed
+ * @returns {boolean} returns true if a match was found and the array was altered
  */
 function removeArrayElement(arry, elmnt) {
-	for (var i = 0; i < arry.length; i++){ if (arry[i] === elmnt) arry.splice(i, 1); }
+	let matchFound = false;
+	for (var i = 0; i < arry.length; i++){
+		if (arry[i] === elmnt) {
+			arry.splice(i, 1);
+			matchFound = true;
+		}
+	}
+	return matchFound;
 }
 
 /**
@@ -41,14 +48,17 @@ function wsSendData(ws, dta) {
  */
 function logMsg(errOrMsg, reject, linksStatElmnt, ws, level, supressStack) {
 	if (typeof errOrMsg === 'string') errOrMsg = new Error(errOrMsg);
-	console[level || 'warn']('*** ' + new Date().toLocaleString() + ' ***  ' + errOrMsg.message + '\n');
+	let errDate = new Date();
+	console[level || 'warn']('*** ' + errDate.toLocaleString() + ' ***  ' + errOrMsg.message + '\n');
 	if (ws) wsSendData(ws, errOrMsg.message + '\n');  // for websocket, always send just the current message, and don't include the error stack, regardless of supressStack
 	if (!supressStack && errOrMsg.stack && (errOrMsg.stack.trim() !== '')) console[level || 'warn'](errOrMsg.stack + '\n');  // tack on the err.stack only if supressStack is false (the default) and an err.stack actually exists and isn't empty
 	if (linksStatElmnt) {
-			removeArrayElement(linksStatus.unrestricting, linksStatElmnt);
-			removeArrayElement(linksStatus.downloading, linksStatElmnt);
-			linksStatus.errors.push({'item': linksStatElmnt, 'error': errOrMsg, date: new Date(), });
-			if (linksStatus.errors.length > settings.server.maxErrLogLength) linksStatus.errors.shift(); // remove top item, if the list is getting too long
+		for (const aryName of Object.keys(linksStatus)) {
+			if (removeArrayElement(linksStatus[aryName], linksStatElmnt) && (aryName !== 'errors')) {         // removeArrayElement() returns true if an item was removed. If it was in the errors list, do just remove it and be done.
+				linksStatus.errors.push({ "item": linksStatElmnt, "error": errOrMsg, "date": errDate });      // if it wasn't in teh errrors list, add it to the list
+				if (linksStatus.errors.length > settings.server.maxErrLogLength) linksStatus.errors.shift();  // remove top item, if the list is getting too long
+			}
+		}
 	}
 	if (reject) reject(errOrMsg);
 	return errOrMsg;
@@ -91,35 +101,50 @@ function unrestrictLink(url, linkPw, ws) {
  */
 function downloadFile(url, storeLocation, ws) {
 	return new Promise((resolve, reject) => {
-		let file = fs.createWriteStream(storeLocation);
-		file.on('error', err => dlErrHandle(req, err));  // *** TO DO: the stream is possibly not closed on this error
-		let lsElmntIndex = linksStatus.downloading.push({"url": url, "file": file, "fileSize": null});
-		let lsElement = linksStatus.downloading[lsElmntIndex - 1];
-		function dlErrHandle(req, err) {
-			req.abort();
-			file.close();
-			fs.unlink(storeLocation);
-			logMsg(err, reject, lsElement, ws);
-		}
-		let req = https.get(  // *** TO DO: handle plain http requests?
+		let lsElement = {"url": url, "file": null, "fileSize": null, "request": null};	
+		linksStatus.downloading.push(lsElement);		
+		lsElement.file = fs.createWriteStream(storeLocation)
+		lsElement.request = https.get(  // *** TO DO: handle plain http requests?
 			url,
 			{timeout: settings.debridAccount.requestTimeout}
 		);
-		req.on('error', err => dlErrHandle(req, err));
-		req.on('timeout', () => dlErrHandle(req, 'Timeout requesting file at ' + url));		
-		req.on('response', res => {
+		function dlErrHandle(err) {
+			if (lsElement.request) lsElement.request.abort();
+			if (lsElement.file) file.close();
+			fs.unlink(storeLocation);
+			logMsg(err, reject, lsElement, ws);
+		}
+		lsElement.file.on('error', err => dlErrHandle(err));
+		lsElement.request.on('error', err => dlErrHandle(err));
+		lsElement.request.on('timeout', () => dlErrHandle('Timeout requesting file at ' + url));		
+		lsElement.request.on('response', res => {
 			if (res.headers) lsElement.fileSize = parseInt(res.headers['content-length'], 10);
-			if (res.statusCode !== 200) dlErrHandle(req, 'Status code from ' + url + ' was ' + res.statusCode + ' (expecting status code 200)');
-			res.on('error', err => dlErrHandle(req, err));
-			res.pipe(file);
+			if (res.statusCode !== 200) dlErrHandle('Status code from ' + url + ' was ' + res.statusCode + ' (expecting status code 200)');
+			res.on('error', err => dlErrHandle(err));
+			res.pipe(lsElement.file);
 		});
-		file.on('finish', () => {
+		lsElement.file.on('finish', () => {
 			wsSendData(ws, 'download of ' + url + ' complete');
 			removeArrayElement(linksStatus.downloading, lsElement);
 			linksStatus.completed.push(storeLocation);
 			return resolve(storeLocation);
 		});		
 	});
+}
+
+/**
+ * Cancel a pending operation and remove it from the list
+ * @param {Object} ws - the websocket to send update on when completed
+ * @param {String} urlOrPath - the path or url describing the download or listed item for removal
+ */
+function cancelJob(ws, urlOrPath) {
+	for (var i = 0; i < linksStatus.downloading.length; i++){   // cancel pending downloads that match and close the file that is being written, if any
+		if (urlOrPath === linksStatus.downloading[i].file.path) {
+			if (linksStatus.downloading[i].request) linksStatus.downloading[i].request.abort();
+			if (linksStatus.downloading[i].file) linksStatus.downloading[i].file.close();
+		}
+		logMsg('download cancelled', null, urlOrPath, ws);  // if error type was clicked, remove it and be done. Otherwise, add to error list
+	}
 }
 
 /**
@@ -187,8 +212,9 @@ server.listen(settings.server.port, err => {
 			ws.isAlive = true;
 			ws.on('message', msg => {
 				msg = JSON.parse(msg);
-				if (msg.getStatus) wsSendData(ws, JSON.stringify(linksStatus));
+				if (msg.remove) cancelJob(ws, msg.remove);
 				else submitLinks(ws, msg.links, msg.saveLoc, msg.linksPw);
+				wsSendData(ws, JSON.stringify(linksStatus));  // previously only if (msg.getStatus) - but better to update links status with teh client this on every activity
 			});
 			ws.on('pong', () => ws.isAlive = true);
 			ws.pingTimer = setInterval(() => {
