@@ -28,7 +28,7 @@ skt.onmessage = function(event) {
 			newBar.setAttribute('aria-valuenow', current);
 			newBar.setAttribute('aria-valuemin', 0);
 			newBar.setAttribute('aria-valuemax', max);
-			newBar.onclick((mouseEvent) => skt.send(JSON.stringify({ remove: path })));
+			newBar.onclick = () => skt.send(JSON.stringify({ remove: path }));
 			if (current === 100 && max === 100) newBar.innerText = path;
 			else newBar.innerText = path + ': ' + Math.round(current/max * 100) + '% (' + Math.round(current/1000000) + ' of ' + Math.round(max/1000000) + ' MB)';
 		}
