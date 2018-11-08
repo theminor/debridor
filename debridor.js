@@ -213,7 +213,7 @@ server.listen(settings.server.port, err => {
 			ws.on('message', msg => {
 				msg = JSON.parse(msg);
 				if (msg.remove) cancelJob(ws, msg.remove);
-				else if (!msg.getStatus) submitLinks(ws, msg.links, msg.saveLoc, msg.linksPw);
+				else submitLinks(ws, msg.links, msg.saveLoc, msg.linksPw);
 				wsSendData(ws, JSON.stringify(linksStatus));  // previously only if (msg.getStatus) - but better to update links status with teh client this on every activity
 			});
 			ws.on('pong', () => ws.isAlive = true);
