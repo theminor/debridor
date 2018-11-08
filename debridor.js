@@ -214,7 +214,7 @@ server.listen(settings.server.port, err => {
 				msg = JSON.parse(msg);
 				if (msg.remove) cancelJob(ws, msg.remove);
 				else if (msg.links) submitLinks(ws, msg.links, msg.saveLoc, msg.linksPw);
-				wsSendData(ws, JSON.stringify(linksStatus));  // previously only if (msg.getStatus) - but better to update links status with teh client this on every activity
+				wsSendData(ws, JSON.stringify(linksStatus, (k, v) => k === 'request' ? undefined : v));  // previously only if (msg.getStatus) - but better to update links status with teh client this on every activity; stingify except don't include linksStatus.downloading[i].request because it is circular
 			});
 			ws.on('pong', () => ws.isAlive = true);
 			ws.pingTimer = setInterval(() => {
