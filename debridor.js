@@ -17,6 +17,11 @@ const linksStatus = {downloading: [], unrestricting: [], errors: [], completed: 
 function removeArrayElement(arryName, elmnt, deleteFiles) {
 	let matchFound = false;
 	let arry = linksStatus[arryName];
+	if (arryName === 'errors' && typeof elmnt === 'string') {  // cover the situation where elmnt is presented as a string, but under errors, that probably refers to linksStatus.errors[i].item
+		for (let i = 0; i < linksStatus.errors.length; i++){
+			if (linksStatus.errors[i].item === elmnt) elmnt = linksStatus.errors[i];
+		}		
+	}
 	if (deleteFiles && arryName === 'downloading') {
 		if (typeof elmnt === 'string') {  // cover the situation where elmnt is presented as a string, but under downloading, that could refer to linksStatus.downloading[i].url or linksStatus.downloading[i].file.path
 			for (let i = 0; i < linksStatus.downloading.length; i++){
@@ -25,12 +30,12 @@ function removeArrayElement(arryName, elmnt, deleteFiles) {
 		}
 		if (elmnt.request && elmnt.request.abort) {
 			elmnt.request.abort();  // abort any request pending, if applicable
-			elmnt.aborted = true;
+			elmnt.aborted = true;   // needed in downloadFile()...on('finish')
 		}
 		if (elmnt.file) {
-			if (elmnt.file.close) elmnt.file.close();                     // close open files, if applicable
-			fs.unlink(elmnt.file.path, (error) => { /* anything to do? */ });                    // delete file being saved, if applicable
-			elmnt.aborted = true;
+			if (elmnt.file.close) elmnt.file.close();  // close open files, if applicable
+			fs.unlink(elmnt.file.path, (error) => { /* anything to do? */ });  // delete file being saved, if applicable
+			elmnt.aborted = true;  // needed in downloadFile()...on('finish')
 		}
 	}	
 	for (let i = 0; i < arry.length; i++){
