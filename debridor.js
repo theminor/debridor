@@ -9,12 +9,21 @@ const linksStatus = {downloading: [], unrestricting: [], errors: [], completed: 
 
 /**
  * Utility function to iterate through an array for all elments matching the given object and remove those that match
- * @param {Array} arry - teh array on which to operate
+ * @param {String} arryName - the name of the array to operate on ("downloading", "unrestricting", etc.)
  * @param {Object} elmnt - the element to match and remove from the array
+ * @param {boolean} [deleteFiles=false] - if true, close and delete files from linksStatus.downloading
  * @returns {boolean} returns true if a match was found and the array was altered
  */
-function removeArrayElement(arry, elmnt) {
+function removeArrayElement(arryName, elmnt, deleteFiles) {
 	let matchFound = false;
+	let arry = linksStatus[arryName];
+	if (deleteFiles && arryName === 'downloading') {
+		if (elmnt.request && elmnt.request.abort) elmnt.request.abort();  // abort any request pending, if applicable
+		if (elmnt.file) {
+			if (elmnt.file.close) elmnt.file.close();                     // close open files, if applicable
+			fs.unlink(elmnt.file.path, (error) => { /* anything to do? */ });                    // delete file being saved, if applicable
+		}
+	}	
 	for (var i = 0; i < arry.length; i++){
 		if (arry[i] === elmnt) {
 			arry.splice(i, 1);
@@ -37,6 +46,14 @@ function wsSendData(ws, dta) {
 }
 
 /**
+ * Send update of the linksStatus object on the given websocket
+ * @param {Object} [ws] - the websocket object. If not specified, nothing is sent
+ */
+function wsSendUpdate(ws) {
+	wsSendData(ws, JSON.stringify(linksStatus, (k, v) => k === 'request' ? undefined : v));  // exclude all linksStatus.downloading[x].request objects because it is circular
+}
+
+/**
  * Log an error or other message
  * @param {Error || String} errOrMsg - an error Object that was thrown or a message to log
  * @param {Object} [reject] - if specified, reject will be thrown on behalf of the Promise in the underlying function that called logMsg
@@ -54,13 +71,14 @@ function logMsg(errOrMsg, reject, linksStatElmnt, ws, level, supressStack) {
 	if (!supressStack && errOrMsg.stack && (errOrMsg.stack.trim() !== '')) console[level || 'warn'](errOrMsg.stack + '\n');  // tack on the err.stack only if supressStack is false (the default) and an err.stack actually exists and isn't empty
 	if (linksStatElmnt) {
 		for (const aryName of Object.keys(linksStatus)) {
-			if (removeArrayElement(linksStatus[aryName], linksStatElmnt) && (aryName !== 'errors')) {         // removeArrayElement() returns true if an item was removed. If it was in the errors list, do just remove it and be done.
+			if (removeArrayElement(aryName, linksStatElmnt, true) && (aryName !== 'errors')) {                // removeArrayElement() returns true if an item was removed. If it was in the errors list, do just remove it and be done.
 				linksStatus.errors.push({ "item": linksStatElmnt, "error": errOrMsg, "date": errDate });      // if it wasn't in teh errrors list, add it to the list
 				if (linksStatus.errors.length > settings.server.maxErrLogLength) linksStatus.errors.shift();  // remove top item, if the list is getting too long
 			}
 		}
 	}
 	if (reject) reject(errOrMsg);
+	if (ws) wsSendUpdate(ws);
 	return errOrMsg;
 }
 
@@ -82,7 +100,7 @@ function unrestrictLink(url, linkPw, ws) {
 				res.on('error', err => logMsg(err, reject, url, ws));
 				res.on('data', chunk => dta += chunk);
 				res.on('end', () => {
-					removeArrayElement(linksStatus.unrestricting, url);
+					removeArrayElement('unrestricting', url, false);
 					resolve(JSON.parse(dta).download); // per the api, "link" is the original link, and "download" is the unrestricted link
 				});
 			}
@@ -108,24 +126,18 @@ function downloadFile(url, storeLocation, ws) {
 			url,
 			{timeout: settings.debridAccount.requestTimeout}
 		);
-		function dlErrHandle(err) {
-			if (lsElement.request) lsElement.request.abort();
-			if (lsElement.file) file.close();
-			fs.unlink(storeLocation);
-			logMsg(err, reject, lsElement, ws);
-		}
-		lsElement.file.on('error', err => dlErrHandle(err));
-		lsElement.request.on('error', err => dlErrHandle(err));
-		lsElement.request.on('timeout', () => dlErrHandle('Timeout requesting file at ' + url));		
+		lsElement.file.on('error', err => logMsg(err, reject, lsElement, ws));
+		lsElement.request.on('error', err => logMsg(err, reject, lsElement, ws));
+		lsElement.request.on('timeout', () => logMsg('Timeout requesting file at ' + url, reject, lsElement, ws));		
 		lsElement.request.on('response', res => {
 			if (res.headers) lsElement.fileSize = parseInt(res.headers['content-length'], 10);
-			if (res.statusCode !== 200) dlErrHandle('Status code from ' + url + ' was ' + res.statusCode + ' (expecting status code 200)');
-			res.on('error', err => dlErrHandle(err));
+			if (res.statusCode !== 200) logMsg('Status code from ' + url + ' was ' + res.statusCode + ' (expecting status code 200)', reject, lsElement, ws);
+			res.on('error', err => logMsg(err, reject, lsElement, ws));
 			res.pipe(lsElement.file);
 		});
 		lsElement.file.on('finish', () => {
 			wsSendData(ws, 'download of ' + url + ' complete');
-			removeArrayElement(linksStatus.downloading, lsElement);
+			removeArrayElement('downloading', lsElement, false);
 			linksStatus.completed.push(storeLocation);
 			return resolve(storeLocation);
 		});		
@@ -138,15 +150,8 @@ function downloadFile(url, storeLocation, ws) {
  * @param {String} urlOrPath - the path or url describing the download or listed item for removal
  */
 function cancelJob(ws, urlOrPath) {
-	// *** TO DO - if job is downloading, it goes to completed files; if anythign else it isn't removed!
-	console.log('cancelJob():', urlOrPath, '\n', JSON.stringify(linksStatus, (k, v) => k === 'request' ? undefined : v));
-	for (var i = 0; i < linksStatus.downloading.length; i++){   // cancel pending downloads that match and close the file that is being written, if any
-		if (urlOrPath === linksStatus.downloading[i].file.path) {
-			if (linksStatus.downloading[i].request) linksStatus.downloading[i].request.abort();
-			if (linksStatus.downloading[i].file) linksStatus.downloading[i].file.close();
-		}
-		logMsg('download cancelled', null, urlOrPath, ws, null, true);  // if error type was clicked, remove it and be done. Otherwise, add to error list
-	}
+	console.log('cancelJob():', urlOrPath, '\n', JSON.stringify(linksStatus, (k, v) => k === 'request' ? undefined : v));   // *** debugging - if job is downloading, it goes to completed files; if anythign else it isn't removed!
+	logMsg('download cancelled', null, urlOrPath, ws, null, true); // logMsg() should now cover everything...
 }
 
 /**
@@ -166,6 +171,7 @@ function submitLinks(ws, links, storeageDir, linksPasswd) {
 				wsSendData(ws, 'downloading from unrestricted link: ' + unRestLnk);
 				let successDir = await downloadFile(unRestLnk, storeageDir + path.basename(unRestLnk), ws);
 				wsSendData(ws, 'file saved to ' + successDir);
+				wsSendUpdate(ws);
 			});
 		}
 	});	
@@ -216,7 +222,7 @@ server.listen(settings.server.port, err => {
 				msg = JSON.parse(msg);
 				if (msg.remove) cancelJob(ws, msg.remove);
 				else if (msg.links) submitLinks(ws, msg.links, msg.saveLoc, msg.linksPw);
-				wsSendData(ws, JSON.stringify(linksStatus, (k, v) => k === 'request' ? undefined : v));  // previously only if (msg.getStatus) - but better to update links status with teh client this on every activity; stingify except don't include linksStatus.downloading[i].request because it is circular
+				wsSendUpdate(ws);  // previously only if (msg.getStatus) - but better to update links status with the client this on every activity
 			});
 			ws.on('pong', () => ws.isAlive = true);
 			ws.pingTimer = setInterval(() => {
