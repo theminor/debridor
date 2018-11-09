@@ -86,7 +86,8 @@ function logMsg(errOrMsg, reject, linksStatElmnt, ws, level, supressStack) {
 	if (linksStatElmnt) {
 		for (const aryName of Object.keys(linksStatus)) {
 			if (removeArrayElement(aryName, linksStatElmnt, true) && (aryName !== 'errors')) {                // removeArrayElement() returns true if an item was removed. If it was in the errors list, do just remove it and be done.
-				linksStatus.errors.push({ "item": linksStatElmnt, "error": errOrMsg, "date": errDate });      // if it wasn't in teh errrors list, add it to the list
+				// *** TO DO - these don't seem to be being added
+				linksStatus.errors.push({ "item": linksStatElmnt, "error": errOrMsg, "date": errDate });      // if it wasn't in the errrors list, add it to the list
 				if (linksStatus.errors.length > settings.server.maxErrLogLength) linksStatus.errors.shift();  // remove top item, if the list is getting too long
 			}
 		}
@@ -161,15 +162,6 @@ function downloadFile(url, storeLocation, ws) {
 }
 
 /**
- * Cancel a pending operation and remove it from the list
- * @param {Object} ws - the websocket to send update on when completed
- * @param {String} urlOrPath - the path or url describing the download or listed item for removal
- */
-function cancelJob(ws, urlOrPath) {
-	logMsg('download cancelled', null, urlOrPath, ws, null, true); // logMsg() should now cover everything...
-}
-
-/**
  * Take a list of links and return unrestricted Links from real debrid
  * @param {Object} ws - the websocket on which to send updated data
  * @param {Array} links - array of strings continaing the urls to unrestrict and then download
@@ -183,9 +175,9 @@ function submitLinks(ws, links, storeageDir, linksPasswd) {
 			links.forEach(async lnk => {
 				wsSendData(ws, 'unrestricting link: ' + lnk);
 				let unRestLnk = await unrestrictLink(lnk, linksPasswd, ws);
+				wsSendUpdate(ws);
 				wsSendData(ws, 'downloading from unrestricted link: ' + unRestLnk);
 				let successDir = await downloadFile(unRestLnk, storeageDir + path.basename(unRestLnk), ws);
-				wsSendData(ws, 'file saved to ' + successDir);
 				wsSendUpdate(ws);
 			});
 		}
