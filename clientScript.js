@@ -22,7 +22,7 @@ skt.onmessage = function(event) {
 		while (progBarsDiv.hasChildNodes()) { progBarsDiv.removeChild(progBarsDiv.lastChild); }  // remove all bars and re-build each, below
 		function addBar(current, max, path, style) {
 			let barSurround = progBarsDiv.appendChild(document.createElement('div'));
-			barSurround.className = 'progress';
+			barSurround.className = 'progress mt-3';
 			let newBar = barSurround.appendChild(document.createElement('div'));
 			newBar.className = 'progress-bar ' + style;
 			newBar.setAttribute('role', 'progressbar');
