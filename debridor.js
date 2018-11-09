@@ -18,13 +18,18 @@ function removeArrayElement(arryName, elmnt, deleteFiles) {
 	let matchFound = false;
 	let arry = linksStatus[arryName];
 	if (deleteFiles && arryName === 'downloading') {
+		if (typeof elmnt === 'string') {  // cover the situation where elmnt is presented as a string, but under downloading, that could refer to linksStatus.downloading[i].url or linksStatus.downloading[i].file.path
+			for (let i = 0; i < linksStatus.downloading.length; i++){
+				if ((linksStatus.downloading[i].url === elmnt) || (linksStatus.downloading[i].file.path === elmnt)) elmnt = linksStatus.downloading[i];
+			}
+		}
 		if (elmnt.request && elmnt.request.abort) elmnt.request.abort();  // abort any request pending, if applicable
 		if (elmnt.file) {
 			if (elmnt.file.close) elmnt.file.close();                     // close open files, if applicable
 			fs.unlink(elmnt.file.path, (error) => { /* anything to do? */ });                    // delete file being saved, if applicable
 		}
 	}	
-	for (var i = 0; i < arry.length; i++){
+	for (let i = 0; i < arry.length; i++){
 		if (arry[i] === elmnt) {
 			arry.splice(i, 1);
 			matchFound = true;
