@@ -139,6 +139,7 @@ function downloadFile(url, storeLocation, ws) {
  */
 function cancelJob(ws, urlOrPath) {
 	// *** TO DO - if job is downloading, it goes to completed files; if anythign else it isn't removed!
+	console.log('cancelJob():', urlOrPath, '\n', JSON.stringify(linksStatus, (k, v) => k === 'request' ? undefined : v));
 	for (var i = 0; i < linksStatus.downloading.length; i++){   // cancel pending downloads that match and close the file that is being written, if any
 		if (urlOrPath === linksStatus.downloading[i].file.path) {
 			if (linksStatus.downloading[i].request) linksStatus.downloading[i].request.abort();
