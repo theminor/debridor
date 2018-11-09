@@ -23,10 +23,14 @@ function removeArrayElement(arryName, elmnt, deleteFiles) {
 				if ((linksStatus.downloading[i].url === elmnt) || (linksStatus.downloading[i].file.path === elmnt)) elmnt = linksStatus.downloading[i];
 			}
 		}
-		if (elmnt.request && elmnt.request.abort) elmnt.request.abort();  // abort any request pending, if applicable
+		if (elmnt.request && elmnt.request.abort) {
+			elmnt.request.abort();  // abort any request pending, if applicable
+			elmnt.aborted = true;
+		}
 		if (elmnt.file) {
 			if (elmnt.file.close) elmnt.file.close();                     // close open files, if applicable
 			fs.unlink(elmnt.file.path, (error) => { /* anything to do? */ });                    // delete file being saved, if applicable
+			elmnt.aborted = true;
 		}
 	}	
 	for (let i = 0; i < arry.length; i++){
@@ -124,7 +128,7 @@ function unrestrictLink(url, linkPw, ws) {
  */
 function downloadFile(url, storeLocation, ws) {
 	return new Promise((resolve, reject) => {
-		let lsElement = {"url": url, "file": null, "fileSize": null, "request": null};	
+		let lsElement = {"url": url, "file": null, "fileSize": null, "request": null, "aborted": null};	
 		linksStatus.downloading.push(lsElement);		
 		lsElement.file = fs.createWriteStream(storeLocation)
 		lsElement.request = https.get(  // *** TO DO: handle plain http requests?
@@ -141,9 +145,11 @@ function downloadFile(url, storeLocation, ws) {
 			res.pipe(lsElement.file);
 		});
 		lsElement.file.on('finish', () => {
-			wsSendData(ws, 'download of ' + url + ' complete');
+			if (!lsElement.aborted) {  // downloads that are aborted via request.abort() (see removeArrayElement()) seem to still call file.on('finish')
+				wsSendData(ws, 'download of ' + url + ' complete');
+				linksStatus.completed.push(storeLocation);
+			}
 			removeArrayElement('downloading', lsElement, false);
-			linksStatus.completed.push(storeLocation);
 			return resolve(storeLocation);
 		});		
 	});
