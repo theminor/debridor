@@ -161,7 +161,6 @@ function downloadFile(url, storeLocation, ws) {
  * @param {String} urlOrPath - the path or url describing the download or listed item for removal
  */
 function cancelJob(ws, urlOrPath) {
-	console.log('cancelJob():', urlOrPath, '\n', JSON.stringify(linksStatus, (k, v) => k === 'request' ? undefined : v));   // *** debugging - if job is downloading, it goes to completed files; if anythign else it isn't removed!
 	logMsg('download cancelled', null, urlOrPath, ws, null, true); // logMsg() should now cover everything...
 }
 
@@ -231,7 +230,7 @@ server.listen(settings.server.port, err => {
 			ws.isAlive = true;
 			ws.on('message', msg => {
 				msg = JSON.parse(msg);
-				if (msg.remove) cancelJob(ws, msg.remove);
+				if (msg.remove) logMsg('download cancelled', null, msg.remove, ws, null, true);
 				else if (msg.links) submitLinks(ws, msg.links, msg.saveLoc, msg.linksPw);
 				wsSendUpdate(ws);  // previously only if (msg.getStatus) - but better to update links status with the client this on every activity
 			});
