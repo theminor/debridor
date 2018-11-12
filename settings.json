@@ -12,14 +12,16 @@
 		"apiBaseUrl": "https://api.real-debrid.com/rest/1.0/",
 		"requestTimeout": 10000
 	},
-	"execute": {
-		"command": "/location/command",
-		"args": [
-			"arg1",
-			"arg2"
-		],
-		"options": {
-			"cwd": "/current/directory"
+	"postProcess": {
+		"js": "./location/to/jsFile",
+		"execute": {
+			"command": "/location/command",
+			"args": [
+				"arg1",
+				"arg2"
+			],
+			"options": {
+				"cwd": "/current/directory"
+			}
 		}
-	}
 }
