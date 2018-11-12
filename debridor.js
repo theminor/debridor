@@ -156,6 +156,10 @@ function downloadFile(url, storeLocation, ws) {
 			res.pipe(lsElement.file);
 		});
 		lsElement.file.on('finish', () => {
+			
+			console.log('finish ',	JSON.stringify(linksStatus, (k, v) => k === 'request' ? undefined : v));
+)
+			
 			if (!lsElement.aborted) {  // downloads that are aborted via request.abort() (see removeArrayElement()) seem to still call file.on('finish')
 				wsSendData(ws, 'download of ' + url + ' complete');
 				removeArrayElement('downloading', lsElement, false);
@@ -166,7 +170,7 @@ function downloadFile(url, storeLocation, ws) {
 				
 				
 			}
-			return resolve(storeLocation);
+			resolve(storeLocation);
 		});	
 		wsSendUpdate(ws);
 	});
