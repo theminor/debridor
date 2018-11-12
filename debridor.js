@@ -15,6 +15,9 @@ const linksStatus = {downloading: [], unrestricting: [], errors: [], completed: 
  * @returns {boolean} returns true if a match was found and the array was altered
  */
 function removeArrayElement(arryName, elmnt, deleteFiles) {
+	
+	console.log('removeArrayElement', arryName, elmnt, deleteFiles)
+	
 	let matchFound = false;
 	let arry = linksStatus[arryName];
 	if (arryName === 'errors' && typeof elmnt === 'string') {  // cover the situation where elmnt is presented as a string, but under errors, that probably refers to linksStatus.errors[i].item
@@ -88,6 +91,9 @@ function wsSendUpdate(ws) {
  * @returns {Error} the error as an Error object (even if a srring was supplied)
  */
 function logMsg(errOrMsg, reject, linksStatElmnt, ws, level, supressStack) {
+	
+	console.log('logMsg', reject, linksStatElmnt, level, supressStack);
+	
 	if (typeof errOrMsg === 'string') errOrMsg = new Error(errOrMsg);
 	let errDate = new Date();
 	console[level || 'warn']('*** ' + errDate.toLocaleString() + ' ***  ' + errOrMsg.message + '\n');
@@ -114,6 +120,10 @@ function logMsg(errOrMsg, reject, linksStatElmnt, ws, level, supressStack) {
  * @returns {Promise} resolves into string: url of the unrestricted link
  */
 function unrestrictLink(url, linkPw, ws) {
+	
+	console.log('unrestrictLink', linkPw);
+
+	
 	return new Promise((resolve, reject) => {
 		linksStatus.unrestricting.push(url);
 		let req = https.request(  // *** TO DO: handle plain http requests?
@@ -142,6 +152,9 @@ function unrestrictLink(url, linkPw, ws) {
  * @returns {Promise} resolves to storeLocation - the location where the file was successfully saved
  */
 function downloadFile(url, storeLocation, ws) {
+	
+	console.log('downloadFile', url, storeLocation);
+	
 	return new Promise((resolve, reject) => {
 		let lsElement = {"url": url, "file": null, "fileSize": null, "request": null, "aborted": null};	
 		linksStatus.downloading.push(lsElement);		
@@ -150,13 +163,13 @@ function downloadFile(url, storeLocation, ws) {
 			url,
 			{timeout: settings.debridAccount.requestTimeout}
 		);
-		lsElement.file.on('error', err => { console.log('file err'); logMsg(err, reject, lsElement, ws); });
-		lsElement.request.on('error', err => { console.log('req err'); logMsg(err, reject, lsElement, ws); });
+		lsElement.file.on('error', err => logMsg(err, reject, lsElement, ws));
+		lsElement.request.on('error', err => logMsg(err, reject, lsElement, ws));
 		lsElement.request.on('timeout', () => logMsg('Timeout requesting file at ' + url, reject, lsElement, ws));
 		lsElement.request.on('response', res => {
 			if (res.headers) lsElement.fileSize = parseInt(res.headers['content-length'], 10);
 			if (res.statusCode !== 200) logMsg('Status code from ' + url + ' was ' + res.statusCode + ' (expecting status code 200)', reject, lsElement, ws);
-			res.on('error', err => { console.log('res err'); logMsg(err, reject, lsElement, ws); });
+			res.on('error', err => logMsg(err, reject, lsElement, ws));
 			res.pipe(lsElement.file);
 		});
 		lsElement.file.on('finish', () => {
@@ -187,7 +200,10 @@ function downloadFile(url, storeLocation, ws) {
  * @param {Array} storeageDir - directory at which to store the downloaded files
  * @param {Object} [linksPasswd] - password for the links (if any)
  */
-function submitLinks(ws, links, storeageDir, linksPasswd) {	
+function submitLinks(ws, links, storeageDir, linksPasswd) {
+	
+	console.log('submitLinks', links, storeageDir, linksPasswd);
+	
 	fs.access(storeageDir, fs.constants.W_OK, err => {  // ensure directory is writable by this process
 		if (err) return err;
 		else {
