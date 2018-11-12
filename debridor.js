@@ -16,7 +16,7 @@ const linksStatus = {downloading: [], unrestricting: [], errors: [], completed: 
  */
 function removeArrayElement(arryName, elmnt, deleteFiles) {
 	
-	console.log('removeArrayElement', arryName, elmnt, deleteFiles)
+	console.log('removeArrayElement', arryName, elmnt, deleteFiles);
 	
 	let matchFound = false;
 	let arry = linksStatus[arryName];
@@ -40,7 +40,11 @@ function removeArrayElement(arryName, elmnt, deleteFiles) {
 			fs.unlink(elmnt.file.path, (error) => { /* anything to do? */ });  // delete file being saved, if applicable
 			elmnt.aborted = true;  // needed in downloadFile()...on('finish')
 		}
-	}	
+	}
+	
+	console.log('removeArrayElement-pre', arryName, elmnt, deleteFiles);
+	console.log(JSON.stringify(linksStatus, (k, v) => k === 'request' ? undefined : v));
+	
 	for (let i = 0; i < arry.length; i++){  // iterate and search for a match; if found, remove it
 		if (arry[i] === elmnt) {
 			
@@ -100,39 +104,10 @@ function logMsg(errOrMsg, reject, linksStatElmnt, ws, level, supressStack) {
 	if (ws) wsSendData(ws, errOrMsg.message + '\n');  // for websocket, always send just the current message, and don't include the error stack, regardless of supressStack
 	if (!supressStack && errOrMsg.stack && (errOrMsg.stack.trim() !== '')) console[level || 'warn'](errOrMsg.stack + '\n');  // tack on the err.stack only if supressStack is false (the default) and an err.stack actually exists and isn't empty
 	if (linksStatElmnt) {
-		//for (const aryName of Object.keys(linksStatus)) {
+		for (const aryName of Object.keys(linksStatus)) {
 			
 			// {downloading: [], unrestricting: [], errors: [], completed: []};
 			
-			
-			let aryName = 'downloading';
-			console.log('for loop:', aryName);
-			
-			if (removeArrayElement(aryName, linksStatElmnt, true) && (aryName !== 'errors')) {  // removeArrayElement() returns true if an item was removed. If it was in the errors list, do just remove it and be done.
-				linksStatus.errors.push({ "item": linksStatElmnt, "error": errOrMsg, "date": errDate });  // if it wasn't in the errrors list, add it to the list
-				if (linksStatus.errors.length > settings.server.maxErrLogLength) linksStatus.errors.shift();  // remove top item, if the list is getting too long
-			}
-
-			
-			aryName = 'unrestricting';
-			console.log('for loop:', aryName);
-			
-			if (removeArrayElement(aryName, linksStatElmnt, true) && (aryName !== 'errors')) {  // removeArrayElement() returns true if an item was removed. If it was in the errors list, do just remove it and be done.
-				linksStatus.errors.push({ "item": linksStatElmnt, "error": errOrMsg, "date": errDate });  // if it wasn't in the errrors list, add it to the list
-				if (linksStatus.errors.length > settings.server.maxErrLogLength) linksStatus.errors.shift();  // remove top item, if the list is getting too long
-			}
-
-			
-			aryName = 'errors';
-			console.log('for loop:', aryName);
-			
-			if (removeArrayElement(aryName, linksStatElmnt, true) && (aryName !== 'errors')) {  // removeArrayElement() returns true if an item was removed. If it was in the errors list, do just remove it and be done.
-				linksStatus.errors.push({ "item": linksStatElmnt, "error": errOrMsg, "date": errDate });  // if it wasn't in the errrors list, add it to the list
-				if (linksStatus.errors.length > settings.server.maxErrLogLength) linksStatus.errors.shift();  // remove top item, if the list is getting too long
-			}
-
-			
-			aryName = 'completed';
 			console.log('for loop:', aryName);
 			
 			if (removeArrayElement(aryName, linksStatElmnt, true) && (aryName !== 'errors')) {  // removeArrayElement() returns true if an item was removed. If it was in the errors list, do just remove it and be done.
@@ -142,7 +117,9 @@ function logMsg(errOrMsg, reject, linksStatElmnt, ws, level, supressStack) {
 			
 			
 			
-		//}
+			
+			
+		}
 	}
 	if (reject) reject(errOrMsg);
 	if (ws) wsSendUpdate(ws);
