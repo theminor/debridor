@@ -65,6 +65,12 @@ function wsSendData(ws, dta) {
  */
 function wsSendUpdate(ws) {
 	wsSendData(ws, JSON.stringify(linksStatus, (k, v) => k === 'request' ? undefined : v));  // exclude all linksStatus.downloading[x].request objects because it is circular
+	
+	
+	console.log(JSON.stringify(linksStatus, (k, v) => k === 'request' ? undefined : v));
+	console.log(JSON.stringify(linksStatus.errors));
+
+	
 }
 
 /**
@@ -88,9 +94,6 @@ function logMsg(errOrMsg, reject, linksStatElmnt, ws, level, supressStack) {
 			if (removeArrayElement(aryName, linksStatElmnt, true) && (aryName !== 'errors')) {  // removeArrayElement() returns true if an item was removed. If it was in the errors list, do just remove it and be done.
 				linksStatus.errors.push({ "item": linksStatElmnt, "error": errOrMsg, "date": errDate });  // if it wasn't in the errrors list, add it to the list
 				if (linksStatus.errors.length > settings.server.maxErrLogLength) linksStatus.errors.shift();  // remove top item, if the list is getting too long
-				
-				console.log('***REMOVED*** ', JSON.stringify(linksStatus, (k, v) => k === 'request' ? undefined : v));
-
 			}
 		}
 	}
