@@ -20,7 +20,7 @@ skt.onmessage = function(event) {
 	if (typeof msg === 'object') {
 		let progBarsDiv = document.getElementById('progBars');
 		while (progBarsDiv.hasChildNodes()) { progBarsDiv.removeChild(progBarsDiv.lastChild); }  // remove all bars and re-build each, below
-		function addBar(current, max, path, style) {
+		function addBar(current, max, path, preMsg, style) {
 			let barSurround = progBarsDiv.appendChild(document.createElement('div'));
 			barSurround.className = 'progress mt-3';
 			let newBar = barSurround.appendChild(document.createElement('div'));
@@ -31,13 +31,13 @@ skt.onmessage = function(event) {
 			newBar.setAttribute('aria-valuemin', 0);
 			newBar.setAttribute('aria-valuemax', max);
 			barSurround.onclick = () => skt.send(JSON.stringify({ remove: path }));
-			if (current === 100 && max === 100) newBar.innerText = path;
+			if (current === 100 && max === 100) newBar.innerText = preMsg + path;
 			else newBar.innerText = path + ': ' + Math.round(current/max * 100) + '% (' + Math.round(current/1000000) + ' of ' + Math.round(max/1000000) + ' MB)';
 		}
-		if (msg.unrestricting) msg.unrestricting.forEach(unr => addBar(100, 100, 'Unrestricting: ' + unr, 'bg-warning'));
-		if (msg.downloading) msg.downloading.forEach(unr => addBar(unr.file.bytesWritten, unr.fileSize, unr.file.path, 'bg-info'));
-		if (msg.completed) msg.completed.forEach(unr => addBar(100, 100, 'Complete: ' + unr, 'bg-success'));
-		if (msg.errors) msg.errors.forEach(unr => addBar(100, 100, unr.error + ': ' + unr.item, 'bg-danger'));
+		if (msg.unrestricting) msg.unrestricting.forEach(unr => addBar(100, 100, unr, 'Unrestricting: ', 'bg-warning'));
+		if (msg.downloading) msg.downloading.forEach(unr => addBar(unr.file.bytesWritten, unr.fileSize, unr.file.path, '', 'bg-info'));
+		if (msg.completed) msg.completed.forEach(unr => addBar(100, 100, unr, 'Complete: ', 'bg-success'));
+		if (msg.errors) msg.errors.forEach(unr => addBar(100, 100, unr.item, unr.error + ': ', 'bg-danger'));
 	} else console.log(msg);
 }
 
