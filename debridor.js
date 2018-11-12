@@ -150,13 +150,13 @@ function downloadFile(url, storeLocation, ws) {
 			url,
 			{timeout: settings.debridAccount.requestTimeout}
 		);
-		lsElement.file.on('error', err => {console.log('file err'); logMsg(err, reject, lsElement, ws)); }
-		lsElement.request.on('error', err => {console.log('req err'); logMsg(err, reject, lsElement, ws)); }
-		lsElement.request.on('timeout', () => logMsg('Timeout requesting file at ' + url, reject, lsElement, ws));		
+		lsElement.file.on('error', err => { console.log('file err'); logMsg(err, reject, lsElement, ws); });
+		lsElement.request.on('error', err => { console.log('req err'); logMsg(err, reject, lsElement, ws); });
+		lsElement.request.on('timeout', () => logMsg('Timeout requesting file at ' + url, reject, lsElement, ws));
 		lsElement.request.on('response', res => {
 			if (res.headers) lsElement.fileSize = parseInt(res.headers['content-length'], 10);
 			if (res.statusCode !== 200) logMsg('Status code from ' + url + ' was ' + res.statusCode + ' (expecting status code 200)', reject, lsElement, ws);
-			res.on('error', err => {console.log('res err'); logMsg(err, reject, lsElement, ws)); }
+			res.on('error', err => { console.log('res err'); logMsg(err, reject, lsElement, ws); });
 			res.pipe(lsElement.file);
 		});
 		lsElement.file.on('finish', () => {
