@@ -86,16 +86,7 @@ function logMsg(errOrMsg, reject, linksStatElmnt, ws, level, supressStack) {
 	if (linksStatElmnt) {
 		for (const aryName of Object.keys(linksStatus)) {
 			if (removeArrayElement(aryName, linksStatElmnt, true) && (aryName !== 'errors')) {  // removeArrayElement() returns true if an item was removed. If it was in the errors list, do just remove it and be done.
-				// *** TO DO - these don't seem to be being added
-				
-				console.log('removed ', aryName);
-				
-				
 				linksStatus.errors.push({ "item": linksStatElmnt, "error": errOrMsg, "date": errDate });  // if it wasn't in the errrors list, add it to the list
-				
-				console.log(JSON.stringify(linksStatus, (k, v) => k === 'request' ? undefined : v));
-				console.log(linksStatus.errors.length, settings.server.maxErrLogLength);
-				
 				if (linksStatus.errors.length > settings.server.maxErrLogLength) linksStatus.errors.shift();  // remove top item, if the list is getting too long
 			}
 		}
@@ -161,11 +152,12 @@ function downloadFile(url, storeLocation, ws) {
 		lsElement.file.on('finish', () => {
 			if (!lsElement.aborted) {  // downloads that are aborted via request.abort() (see removeArrayElement()) seem to still call file.on('finish')
 				wsSendData(ws, 'download of ' + url + ' complete');
+				removeArrayElement('downloading', lsElement, false);
 				linksStatus.completed.push(storeLocation);
 			}
-			removeArrayElement('downloading', lsElement, false);
 			return resolve(storeLocation);
-		});		
+		});	
+		wsSendUpdate(ws);
 	});
 }
 
