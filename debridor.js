@@ -15,9 +15,6 @@ const linksStatus = {downloading: [], unrestricting: [], errors: [], completed: 
  * @returns {boolean} returns true if a match was found and the array was altered
  */
 function removeArrayElement(arryName, elmnt, deleteFiles) {
-	
-	console.log('removeArrayElement', arryName, elmnt, deleteFiles);
-	
 	let matchFound = false;
 	let arry = linksStatus[arryName];
 	if (arryName === 'errors' && typeof elmnt === 'string') {  // cover the situation where elmnt is presented as a string, but under errors, that probably refers to linksStatus.errors[i].item
@@ -41,24 +38,12 @@ function removeArrayElement(arryName, elmnt, deleteFiles) {
 			elmnt.aborted = true;  // needed in downloadFile()...on('finish')
 		}
 	}
-	
-	console.log('removeArrayElement-pre', arryName, elmnt, deleteFiles);
-	console.log(JSON.stringify(linksStatus, (k, v) => k === 'request' ? undefined : v));
-	
 	for (let i = 0; i < arry.length; i++){  // iterate and search for a match; if found, remove it
 		if (arry[i] === elmnt) {
-			
-			
-			console.log('SPLICE', arryName, elmnt, deleteFiles);
-			
 			arry.splice(i, 1);
 			matchFound = true;
 		}
 	}
-	
-	console.log(JSON.stringify(linksStatus, (k, v) => k === 'request' ? undefined : v));
-
-	
 	return matchFound;
 }
 
@@ -80,12 +65,6 @@ function wsSendData(ws, dta) {
  */
 function wsSendUpdate(ws) {
 	wsSendData(ws, JSON.stringify(linksStatus, (k, v) => k === 'request' ? undefined : v));  // exclude all linksStatus.downloading[x].request objects because it is circular
-	
-	
-	console.log(JSON.stringify(linksStatus, (k, v) => k === 'request' ? undefined : v));
-	console.log(JSON.stringify(linksStatus.errors));
-
-	
 }
 
 /**
@@ -99,9 +78,6 @@ function wsSendUpdate(ws) {
  * @returns {Error} the error as an Error object (even if a srring was supplied)
  */
 function logMsg(errOrMsg, reject, linksStatElmnt, ws, level, supressStack) {
-	
-	console.log('logMsg', reject, linksStatElmnt, level, supressStack);
-	
 	if (typeof errOrMsg === 'string') errOrMsg = new Error(errOrMsg);
 	let errDate = new Date();
 	console[level || 'warn']('*** ' + errDate.toLocaleString() + ' ***  ' + errOrMsg.message + '\n');
@@ -110,11 +86,6 @@ function logMsg(errOrMsg, reject, linksStatElmnt, ws, level, supressStack) {
 	if (linksStatElmnt) {
 		let matchFound = false;  // only remove from one!
 		for (const aryName of Object.keys(linksStatus)) {
-			
-			// {downloading: [], unrestricting: [], errors: [], completed: []};
-			
-			console.log('for loop:', aryName);
-			
 			if (!matchFound && (removeArrayElement(aryName, linksStatElmnt, true))) {
 				matchFound = true;
 				if (aryName !== 'errors') {
@@ -122,17 +93,6 @@ function logMsg(errOrMsg, reject, linksStatElmnt, ws, level, supressStack) {
 					if (linksStatus.errors.length > settings.server.maxErrLogLength) linksStatus.errors.shift();  // remove top item, if the list is getting too long
 				}
 			}
-			
-			
-//			if (removeArrayElement(aryName, linksStatElmnt, true) && (aryName !== 'errors')) {  // removeArrayElement() returns true if an item was removed. If it was in the errors list, do just remove it and be done.
-//				linksStatus.errors.push({ "item": linksStatElmnt, "error": errOrMsg, "date": errDate });  // if it wasn't in the errrors list, add it to the list
-//				if (linksStatus.errors.length > settings.server.maxErrLogLength) linksStatus.errors.shift();  // remove top item, if the list is getting too long
-//			}
-			
-			
-			
-			
-			
 		}
 	}
 	if (reject) reject(errOrMsg);
@@ -148,10 +108,6 @@ function logMsg(errOrMsg, reject, linksStatElmnt, ws, level, supressStack) {
  * @returns {Promise} resolves into string: url of the unrestricted link
  */
 function unrestrictLink(url, linkPw, ws) {
-	
-	console.log('unrestrictLink', linkPw);
-
-	
 	return new Promise((resolve, reject) => {
 		linksStatus.unrestricting.push(url);
 		let req = https.request(  // *** TO DO: handle plain http requests?
@@ -180,9 +136,6 @@ function unrestrictLink(url, linkPw, ws) {
  * @returns {Promise} resolves to storeLocation - the location where the file was successfully saved
  */
 function downloadFile(url, storeLocation, ws) {
-	
-	console.log('downloadFile', url, storeLocation);
-	
 	return new Promise((resolve, reject) => {
 		let lsElement = {"url": url, "file": null, "fileSize": null, "request": null, "aborted": null};	
 		linksStatus.downloading.push(lsElement);		
@@ -201,19 +154,10 @@ function downloadFile(url, storeLocation, ws) {
 			res.pipe(lsElement.file);
 		});
 		lsElement.file.on('finish', () => {
-			
-			console.log('finish ',	JSON.stringify(linksStatus, (k, v) => k === 'request' ? undefined : v));
-
-			
 			if (!lsElement.aborted) {  // downloads that are aborted via request.abort() (see removeArrayElement()) seem to still call file.on('finish')
 				wsSendData(ws, 'download of ' + url + ' complete');
 				removeArrayElement('downloading', lsElement, false);
 				linksStatus.completed.push(storeLocation);
-				
-				
-				console.log(JSON.stringify('***FINISH*** ', linksStatus, (k, v) => k === 'request' ? undefined : v));
-				
-				
 			}
 			resolve(storeLocation);
 		});	
@@ -229,9 +173,6 @@ function downloadFile(url, storeLocation, ws) {
  * @param {Object} [linksPasswd] - password for the links (if any)
  */
 function submitLinks(ws, links, storeageDir, linksPasswd) {
-	
-	console.log('submitLinks', links, storeageDir, linksPasswd);
-	
 	fs.access(storeageDir, fs.constants.W_OK, err => {  // ensure directory is writable by this process
 		if (err) return err;
 		else {
