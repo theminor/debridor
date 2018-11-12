@@ -40,6 +40,10 @@ function removeArrayElement(arryName, elmnt, deleteFiles) {
 	}	
 	for (let i = 0; i < arry.length; i++){  // iterate and search for a match; if found, remove it
 		if (arry[i] === elmnt) {
+			
+			
+			console.log('SPLICE', elmnt)
+			
 			arry.splice(i, 1);
 			matchFound = true;
 		}
