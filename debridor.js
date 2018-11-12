@@ -88,6 +88,9 @@ function logMsg(errOrMsg, reject, linksStatElmnt, ws, level, supressStack) {
 			if (removeArrayElement(aryName, linksStatElmnt, true) && (aryName !== 'errors')) {  // removeArrayElement() returns true if an item was removed. If it was in the errors list, do just remove it and be done.
 				linksStatus.errors.push({ "item": linksStatElmnt, "error": errOrMsg, "date": errDate });  // if it wasn't in the errrors list, add it to the list
 				if (linksStatus.errors.length > settings.server.maxErrLogLength) linksStatus.errors.shift();  // remove top item, if the list is getting too long
+				
+				console.log(JSON.stringify('***REMOVED*** ', linksStatus, (k, v) => k === 'request' ? undefined : v));
+
 			}
 		}
 	}
@@ -154,6 +157,11 @@ function downloadFile(url, storeLocation, ws) {
 				wsSendData(ws, 'download of ' + url + ' complete');
 				removeArrayElement('downloading', lsElement, false);
 				linksStatus.completed.push(storeLocation);
+				
+				
+				console.log(JSON.stringify('***FINISH*** ', linksStatus, (k, v) => k === 'request' ? undefined : v));
+				
+				
 			}
 			return resolve(storeLocation);
 		});	
