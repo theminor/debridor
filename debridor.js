@@ -10,7 +10,7 @@ const linksStatus = {downloading: [], unrestricting: [], errors: [], completed: 
 /**
  * Utility function to iterate through an array for all elments matching the given object and remove those that match
  * @param {String} arryName - the name of the array to operate on ("downloading", "unrestricting", etc.)
- * @param {Object} elmnt - the element to match and remove from the array
+ * @param {Object || String} elmnt - the element to match and remove from the array (or the name of the element, in whch case the name/property will be searched for)
  * @param {boolean} [deleteFiles=false] - if true, close and delete files from linksStatus.downloading
  * @returns {boolean} returns true if a match was found and the array was altered
  */
@@ -38,7 +38,7 @@ function removeArrayElement(arryName, elmnt, deleteFiles) {
 			elmnt.aborted = true;  // needed in downloadFile()...on('finish')
 		}
 	}	
-	for (let i = 0; i < arry.length; i++){
+	for (let i = 0; i < arry.length; i++){  // iterate and search for a match; if found, remove it
 		if (arry[i] === elmnt) {
 			arry.splice(i, 1);
 			matchFound = true;
@@ -85,9 +85,13 @@ function logMsg(errOrMsg, reject, linksStatElmnt, ws, level, supressStack) {
 	if (!supressStack && errOrMsg.stack && (errOrMsg.stack.trim() !== '')) console[level || 'warn'](errOrMsg.stack + '\n');  // tack on the err.stack only if supressStack is false (the default) and an err.stack actually exists and isn't empty
 	if (linksStatElmnt) {
 		for (const aryName of Object.keys(linksStatus)) {
-			if (removeArrayElement(aryName, linksStatElmnt, true) && (aryName !== 'errors')) {                // removeArrayElement() returns true if an item was removed. If it was in the errors list, do just remove it and be done.
+			if (removeArrayElement(aryName, linksStatElmnt, true) && (aryName !== 'errors')) {  // removeArrayElement() returns true if an item was removed. If it was in the errors list, do just remove it and be done.
 				// *** TO DO - these don't seem to be being added
-				linksStatus.errors.push({ "item": linksStatElmnt, "error": errOrMsg, "date": errDate });      // if it wasn't in the errrors list, add it to the list
+				
+				console.log('removed ', aryName);
+				
+				
+				linksStatus.errors.push({ "item": linksStatElmnt, "error": errOrMsg, "date": errDate });  // if it wasn't in the errrors list, add it to the list
 				if (linksStatus.errors.length > settings.server.maxErrLogLength) linksStatus.errors.shift();  // remove top item, if the list is getting too long
 			}
 		}
@@ -243,3 +247,4 @@ server.listen(settings.server.port, err => {
 });
 
 // *** TO DO: pull local directories to save locations on client?
+// *** TO DO: run script when download compelte (for example, to unzip files, to move files, etc.)
