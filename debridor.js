@@ -42,7 +42,7 @@ function removeArrayElement(arryName, elmnt, deleteFiles) {
 		if (arry[i] === elmnt) {
 			
 			
-			console.log('SPLICE', elmnt)
+			console.log('SPLICE', arryName, elmnt, deleteFiles))
 			
 			arry.splice(i, 1);
 			matchFound = true;
