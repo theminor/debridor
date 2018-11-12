@@ -89,9 +89,6 @@ function logMsg(errOrMsg, reject, linksStatElmnt, ws, level, supressStack) {
 			if (!matchFound && (removeArrayElement(aryName, linksStatElmnt, true))) {
 				matchFound = true;
 				if (aryName !== 'errors') {
-					
-					console.log(errOrMsg);
-					
 					linksStatus.errors.push({ "item": linksStatElmnt, "error": errOrMsg, "date": errDate });  // if it wasn't in the errrors list, add it to the list
 					if (linksStatus.errors.length > settings.server.maxErrLogLength) linksStatus.errors.shift();  // remove top item, if the list is getting too long
 				}
@@ -99,6 +96,9 @@ function logMsg(errOrMsg, reject, linksStatElmnt, ws, level, supressStack) {
 		}
 	}
 	if (reject) reject(errOrMsg);
+	
+	console.log(JSON.stringify(linksStatus, (k, v) => k === 'request' ? undefined : v));
+
 	if (ws) wsSendUpdate(ws);
 	return errOrMsg;
 }
