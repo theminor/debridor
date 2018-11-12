@@ -101,6 +101,9 @@ function logMsg(errOrMsg, reject, linksStatElmnt, ws, level, supressStack) {
 	if (!supressStack && errOrMsg.stack && (errOrMsg.stack.trim() !== '')) console[level || 'warn'](errOrMsg.stack + '\n');  // tack on the err.stack only if supressStack is false (the default) and an err.stack actually exists and isn't empty
 	if (linksStatElmnt) {
 		for (const aryName of Object.keys(linksStatus)) {
+			
+			console.log('for loop:', aryName);
+			
 			if (removeArrayElement(aryName, linksStatElmnt, true) && (aryName !== 'errors')) {  // removeArrayElement() returns true if an item was removed. If it was in the errors list, do just remove it and be done.
 				linksStatus.errors.push({ "item": linksStatElmnt, "error": errOrMsg, "date": errDate });  // if it wasn't in the errrors list, add it to the list
 				if (linksStatus.errors.length > settings.server.maxErrLogLength) linksStatus.errors.shift();  // remove top item, if the list is getting too long
