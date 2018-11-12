@@ -92,6 +92,10 @@ function logMsg(errOrMsg, reject, linksStatElmnt, ws, level, supressStack) {
 				
 				
 				linksStatus.errors.push({ "item": linksStatElmnt, "error": errOrMsg, "date": errDate });  // if it wasn't in the errrors list, add it to the list
+				
+				console.log(JSON.stringify(linksStatus, (k, v) => k === 'request' ? undefined : v));
+				console.log(linksStatus.errors.length, settings.server.maxErrLogLength);
+				
 				if (linksStatus.errors.length > settings.server.maxErrLogLength) linksStatus.errors.shift();  // remove top item, if the list is getting too long
 			}
 		}
