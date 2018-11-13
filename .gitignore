@@ -66,6 +66,9 @@ typings/
 # settings file, which could have passwords/api keys
 settings.json
 
+#post processing scripts
+postprocess*
+
 #page template is user specific
 pageTemplate.html
 clientScript.js
