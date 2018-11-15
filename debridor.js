@@ -156,12 +156,15 @@ function downloadFile(url, storeLocation, ws) {
 			res.on('error', err => logMsg(err, reject, lsElement, ws));
 			res.pipe(lsElement.file);
 		});
-		lsElement.file.on('finish', () => {
+		lsElement.file.on('finish', async () => {
 			if (!lsElement.aborted) {  // downloads that are aborted via request.abort() (see removeArrayElement()) seem to still call file.on('finish')
 				wsSendData(ws, 'download of ' + url + ' complete');
 				removeArrayElement('downloading', lsElement, false);
 				if (settings.postProcess) {  // post processing will first call the node file in settings.postProcess, (module.exports is a single function called with (linksStatus, lsElement); then it will execute a shell command via the settings.postProcess.execute object
-					if (postProcJs) console.log(postProcJs(linksStatus, lsElement));
+					if (postProcJs) {
+						storeLocation = await postProcJs(linksStatus, lsElement).catch(err => console.log('post processing error: ' + err));
+						console.log('post processing completed: ' + storeLocation);
+					}
 					if (settings.postProcess.execute) {
 						const proc = spawn(settings.postProcess.execute.command, settings.postProcess.execute.args, settings.postProcess.execute.options);
 						proc.on('close', code => console.log(settings.postProcess.execute.command + ' exited with code ' + code));
