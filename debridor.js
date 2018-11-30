@@ -136,9 +136,10 @@ function unrestrictLink(url, linkPw, ws) {
  * @param {String} url - the url of the file to download
  * @param {String} storeLocation - full path and filename at which to store the downloaded file
  * @param {Object} [ws] - the websocket object. If specified, error messages will also be sent on the websocket; otherwise it will only be logged on the server
+ * @param {String} [passwd] - password submitted by user to pass on to post-processor (for example, to use for passworded archives)
  * @returns {Promise} resolves to storeLocation - the location where the file was successfully saved
  */
-function downloadFile(url, storeLocation, ws) {
+function downloadFile(url, storeLocation, ws, passwd) {
 	return new Promise((resolve, reject) => {
 		let lsElement = {"url": url, "file": null, "fileSize": null, "request": null, "aborted": null};	
 		linksStatus.downloading.push(lsElement);		
@@ -162,7 +163,7 @@ function downloadFile(url, storeLocation, ws) {
 				removeArrayElement('downloading', lsElement, false);
 				if (settings.postProcess) {  // post processing will first call the node file in settings.postProcess, (module.exports is a single function called with (linksStatus, lsElement); then it will execute a shell command via the settings.postProcess.execute object
 					if (postProcJs) {
-						storeLocation = await postProcJs(linksStatus, lsElement).catch(err => console.log('post processing error: ' + err));
+						storeLocation = await postProcJs(linksStatus, lsElement, passwd).catch(err => console.log('post processing error: ' + err));
 						console.log('post processing completed: ' + storeLocation);
 					}
 					if (settings.postProcess.execute) {
@@ -194,7 +195,7 @@ function submitLinks(ws, links, storeageDir, linksPasswd) {
 				let unRestLnk = await unrestrictLink(lnk, linksPasswd, ws);
 				wsSendUpdate(ws);
 				wsSendData(ws, 'downloading from unrestricted link: ' + unRestLnk);
-				let successDir = await downloadFile(unRestLnk, storeageDir + path.basename(unRestLnk), ws);
+				let successDir = await downloadFile(unRestLnk, storeageDir + path.basename(unRestLnk), ws, linksPasswd);
 				wsSendUpdate(ws);
 			});
 		}
