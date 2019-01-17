@@ -4,7 +4,6 @@ const http = require('http');
 const https = require('https');
 const WebSocket = require('ws');
 const path = require('path');
-const { spawn } = require('child_process');
 const settings = require('./settings.json');
 let postProcJs = null;
 if (settings.postProcess.js) postProcJs = require(settings.postProcess.js);
@@ -161,15 +160,9 @@ function downloadFile(url, storeLocation, ws, passwd) {
 			if (!lsElement.aborted) {  // downloads that are aborted via request.abort() (see removeArrayElement()) seem to still call file.on('finish')
 				wsSendData(ws, 'download of ' + url + ' complete');
 				removeArrayElement('downloading', lsElement, false);
-				if (settings.postProcess) {  // post processing will first call the node file in settings.postProcess, (module.exports is a single function called with (linksStatus, lsElement); then it will execute a shell command via the settings.postProcess.execute object
-					if (postProcJs) {
-						storeLocation = await postProcJs(linksStatus, lsElement, passwd).catch(err => console.log('post processing error: ' + err));
-						console.log('post processing completed: ' + storeLocation);
-					}
-					if (settings.postProcess.execute) {
-						const proc = spawn(settings.postProcess.execute.command, settings.postProcess.execute.args, settings.postProcess.execute.options);
-						proc.on('close', code => console.log(settings.postProcess.execute.command + ' exited with code ' + code));
-					}
+				if (settings.postProcess && postProcJs) {  // post processing will first call the node file in settings.postProcess, (module.exports is a single function called with (linksStatus, lsElement); then it will execute a shell command via the settings.postProcess.execute object
+					storeLocation = await postProcJs(linksStatus, lsElement, passwd).catch(err => console.log('post processing error: ' + err));
+					console.log('post processing completed: ' + storeLocation);
 				}
 				linksStatus.completed.push(storeLocation);
 			}
