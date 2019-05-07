@@ -12,12 +12,16 @@
 		}
 		div {
 			width: 200px;
-			text-align: center;
+			padding-left: 30px;
 		}
 		#status {
 			font-family: "Courier New", Courier, monospace;
 			font-size: 20px;
 		}
+    #statusTable {
+      font-size: 14px;
+      padding-bottom: 20px;
+    }
 		button {
 			background-color: ForestGreen;
 			color: white;
@@ -28,7 +32,7 @@
 		}
     .redFont { color: DarkRed; }
     .greenFont { color: ForestGreen; }
-    table { color: DarkBlue; }
+    .blueFont { color: DarkBlue; }
 	</style>
   <script>
     const skt = new WebSocket(window.location.href.replace('http://', 'ws://').replace('https://', 'wss://'));
@@ -36,12 +40,25 @@
     function $(sel) { return document.getElementById(sel); }
     function getStatus() { skt.send("getStatus"); }
     skt.onmessage = function(event) {
+      const st = $('status');
+      const bt = $('startStopBtn');
       msg = JSON.parse(event.data);
       if (msg.isRecording) {
-        $('status').innerText = '[Recording]';
-        // *** TO DO display msg.isRecording
+        st.innerText = '[Recording]';
+        st.className = 'redFont';
+        $('statusTable').innerHTML = `<tr><td>Filename:</td><td>${msg.isRecording.fileName}</td></tr>
+                                      <tr><td>Channels:</td><td>${msg.isRecording.numChannels}</td></tr>
+                                      <tr><td>Time:</td><td>${msg.isRecording.recordTime}</td></tr>
+                                      <tr><td>Size:</td><td>${msg.isRecording.fileSize}</td></tr>
+                                      <tr id="clipCnt"><td>Clips:</td><td>${msg.isRecording.numClips}</td></tr>`;
+        if (msg.isRecording.numClips > 0) $('clipCnt').className = 'redFont';
+        bt.value= 'Stop';
+        bt.style.backgroundColor = 'DarkRed';
       } else {
-        $('status').innerText = '[Stopped]';
+        st.innerText = '[Stopped]';
+        st.className = 'blueFont';
+        bt.value= 'Record';
+        bt.style.backgroundColor = 'ForestGreen';
       }
       if (msg.files) {
         const tbl = $('filesTable');
@@ -59,10 +76,11 @@
     setInterval(getStatus, 7500);
   </script>
 </head>
-<body>
+<body class="blueFont">
 	<h1>xr18</h1>
 	<div>
 		<h3 id="status">[Stopped]</h3>
+    <table id="statusTable"></table>
 		<button id="startStopBtn" onclick="startStopBtnClick()">Record</button>
 	</div>
 	<h2>Files:</h2>
